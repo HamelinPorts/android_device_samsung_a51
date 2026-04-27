@@ -2,5 +2,11 @@
     {
         "repository": "android_device_samsung_universal9611-common",
         "target_path": "device/samsung/universal9611-common"
+    },
+    {
+        "repository": "android_external_HamelinPortsImsService",
+        "target_path": "packages/apps/HamelinPortsImsService",
+        "remote": "hamelinports",
+        "branch": "lineage-23.2"
     }
 ]

@@ -1,0 +1,11 @@
+# HamelinPortsImsService (system_app) binds the Samsung vendor binder
+# `vendor.samsung.hardware.radio.channel.ISehRadioChannel/imsd{,2}`
+# (declared in vendor_service_contexts under type hal_radio_service)
+# to notify the modem of IMS registration state. Without this route
+# the modem doesn't learn that IMS is up and the EPC routes MT voice
+# via CSFB instead of as an IMS INVITE.
+#
+# The forward binder_call(system_app, rild) and reverse
+# allow(rild, system_app:binder call) are granted in
+# sepolicy/vendor/rild.te; here we just need the service-manager find.
+allow system_app hal_radio_service:service_manager find;

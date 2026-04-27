@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.hamelinports.samsung.ims"
+    android:sharedUserId="android.uid.system">
+
+    <application
+        android:label="SamsungImsModemBridge"
+        android:allowBackup="false"
+        android:directBootAware="true">
+
+        <!-- The action is the well-known intent HamelinPortsImsService binds
+             on. Permission gate keeps it usable only by other
+             system-signed clients. -->
+        <service
+            android:name=".SamsungImsModemBridgeService"
+            android:exported="true"
+            android:directBootAware="true"
+            android:permission="android.permission.READ_PRIVILEGED_PHONE_STATE">
+            <intent-filter>
+                <action android:name="org.hamelinports.ims.modem.action.BIND_BRIDGE"/>
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

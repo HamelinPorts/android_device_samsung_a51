@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Per-device IImsModemBridge implementation for Samsung A51-class
+// hardware (Shannon 9611). HamelinPortsImsService binds to this APK at
+// runtime via the action org.hamelinports.ims.modem.action.BIND_BRIDGE.
+//
+// Runs under sharedUserId android.uid.system so it can talk to the
+// vendor.samsung.hardware.radio.channel.ISehRadioChannel binder
+// hosted by rild — same UID + cert posture HamelinPortsImsService used
+// to have for this code, just split out so the IMS service core
+// can be reused on non-Samsung devices unchanged.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "SamsungImsModemBridge",
+    srcs: ["src/**/*.java"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    static_libs: ["hamelinports-ims-aidl"],
+    required: ["privapp-permissions-org.hamelinports.samsung.ims"],
+    optimize: {
+        enabled: false,
+    },
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-org.hamelinports.samsung.ims",
+    filename: "privapp-permissions-org.hamelinports.samsung.ims.xml",
+    src: "privapp-permissions-org.hamelinports.samsung.ims.xml",
+    sub_dir: "permissions",
+}

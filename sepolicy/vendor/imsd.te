@@ -1,0 +1,27 @@
+# Samsung IMS native daemon (vendor partition). Hosts the
+# `vendor.samsung.hardware.radio.channel.ISehRadioChannel/imsd{,2}` AIDL
+# on /dev/vndbinder — the channel SamsungImsModemBridge uses to push
+# IMS state (registration, MT routing preference) into the modem.
+#
+# Vendor-side domain so we have room to grant the privileged perms imsd
+# needs (CAP_NET_ADMIN/NET_RAW, netlink_xfrm_socket) without tripping
+# the system-side neverallow rules. Init transitions to this domain on
+# launch.
+
+type imsd, domain;
+type imsd_exec, exec_type, vendor_file_type, file_type;
+type imsd_socket, file_type;
+
+init_daemon_domain(imsd)
+net_domain(imsd)
+
+allow imsd self:capability { net_admin net_raw setuid setgid };
+allow imsd self:netlink_xfrm_socket
+    { create bind getattr write read setopt nlmsg_write nlmsg_read };
+allow imsd self:netlink_route_socket
+    { create bind getattr write read setopt nlmsg_write nlmsg_read };
+allow imsd self:unix_stream_socket
+    { create bind listen accept read write getopt setopt };
+
+# imsd uses /dev/vndbinder to host the ISehRadioChannel/imsd AIDL service.
+vndbinder_use(imsd)

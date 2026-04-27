@@ -80,3 +80,23 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/com.nxp.mifare.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_hcesimese/com.nxp.mifare.xml \
     frameworks/native/data/etc/com.nxp.mifare.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_hcesim/com.nxp.mifare.xml \
     frameworks/native/data/etc/com.nxp.mifare.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_hce/com.nxp.mifare.xml
+
+# IMS — HamelinPortsImsService (carrier-agnostic core) + IRadioIms shim
+# (vendor RIL lacks IRadioIms on this device) + per-device Samsung-Shannon
+# modem bridge for IMS-state notification to the EPC.
+$(call inherit-product, packages/apps/HamelinPortsImsService/hamelinports-ims.mk)
+$(call inherit-product, packages/apps/HamelinPortsImsService/radio-ims-shim/hamelinports-ims-shim.mk)
+$(call inherit-product, device/samsung/a51/SamsungImsModemBridge/samsung-ims-bridge.mk)
+
+# Samsung native daemon: hosts the ISehRadioChannel/imsd vendor binder that
+# SamsungImsModemBridge talks to.
+PRODUCT_PACKAGES += imsd
+
+# Force VoLTE/VT/WFC platform availability flags on. The A14 AIDL RIL on this
+# device under-reports LteVopsSupportInfo.mVopsSupport=NOT_SUPPORTED on cells
+# where VoLTE actually works, which gates ImsManager.isVolteEnabledByPlatform().
+# These overrides bypass that check; the companion frameworks/opt/telephony
+# patch keeps NET_CAPABILITY_MMTEL on the data network.
+PRODUCT_SYSTEM_PROPERTIES += persist.dbg.volte_avail_ovr=1
+PRODUCT_SYSTEM_PROPERTIES += persist.dbg.vt_avail_ovr=1
+PRODUCT_SYSTEM_PROPERTIES += persist.dbg.wfc_avail_ovr=1

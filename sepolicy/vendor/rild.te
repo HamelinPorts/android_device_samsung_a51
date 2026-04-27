@@ -1,0 +1,6 @@
+# HamelinPortsImsService (system_app) calls into rild via the
+# vendor.samsung.hardware.radio.channel.ISehRadioChannel/imsd AIDL,
+# and rild makes binder callbacks back into system_app for indication
+# events.
+binder_call(system_app, rild)
+allow rild system_app:binder call;

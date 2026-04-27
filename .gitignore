@@ -1,0 +1,4 @@
+# carrier-specific debugging captures — keep out of public history
+volte-capture/
+# legacy permissive workaround — not used; bootloader cmdline now handled cleanly
+rootdir/etc/init.selinux_permissive.rc
