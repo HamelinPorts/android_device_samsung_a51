@@ -8,5 +8,11 @@
         "target_path": "packages/apps/HamelinPortsImsService",
         "remote": "hamelinports",
         "branch": "lineage-23.2"
+    },
+    {
+        "repository": "android_external_HamelinPortsImsStatus",
+        "target_path": "packages/apps/HamelinPortsImsStatus",
+        "remote": "hamelinports",
+        "branch": "lineage-23.2"
     }
 ]
