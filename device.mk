@@ -88,6 +88,12 @@ $(call inherit-product, packages/apps/HamelinPortsImsService/hamelinports-ims.mk
 $(call inherit-product, packages/apps/HamelinPortsImsService/radio-ims-shim/hamelinports-ims-shim.mk)
 $(call inherit-product, device/samsung/a51/SamsungImsModemBridge/samsung-ims-bridge.mk)
 
+# Quick-settings tile that surfaces VoLTE / Wi-Fi Calling / VoNR /
+# CS-only state. AOSP/Lineage SystemUI ships no IMS status-bar icon
+# on this branch; the tile gives users a glanceable indicator.
+PRODUCT_PACKAGES += \
+    HamelinPortsImsStatus
+
 # Samsung native daemon: hosts the ISehRadioChannel/imsd vendor binder that
 # SamsungImsModemBridge talks to.
 PRODUCT_PACKAGES += imsd
