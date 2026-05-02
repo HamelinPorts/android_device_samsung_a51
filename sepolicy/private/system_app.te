@@ -9,3 +9,12 @@
 # allow(rild, system_app:binder call) are granted in
 # sepolicy/vendor/rild.te; here we just need the service-manager find.
 allow system_app hal_radio_service:service_manager find;
+
+# Vendored c-ares (external/resiprocate/rutil/dns/ares/ares_init.c) probes
+# net.dns1/net.dns2 via __system_property_find on its __ANDROID__ codepath.
+# AOSP forbids system_app → net_dns_prop (domain.te neverallow): apps must
+# go through ConnectivityManager.getLinkProperties().getDnsServers(). The
+# read failing is harmless — c-ares falls through to a localhost stub and
+# our SIP path doesn't need it (P-CSCF arrives via PCO). Silence the noise
+# until c-ares is patched out of that codepath.
+dontaudit system_app net_dns_prop:file read;
