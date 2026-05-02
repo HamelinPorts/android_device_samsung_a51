@@ -62,3 +62,38 @@ BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
 ## Prop
 TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
+
+# Phase 2 of the kernel rebase plan: USE_KERNEL_NEXT=true on the build
+# command-line switches the kernel source from the legacy 4.14-openela
+# tree (kernel/samsung/universal9611) to the AOSP common-android16-6.12
+# tree (kernel/samsung/universal9611-next). Doesn't yet boot — the goal
+# at this phase is "compiles + packs into boot.img"; vendor-platform
+# code (decon, modem, SCSC WLAN, FIMC-IS, FMP, tzdev, …) all stubbed.
+#
+# Daily-driver builds leave USE_KERNEL_NEXT unset → existing kernel.
+ifeq ($(USE_KERNEL_NEXT),true)
+TARGET_KERNEL_SOURCE := kernel/samsung/universal9611-next
+TARGET_KERNEL_CONFIG := gki_defconfig
+# Disable old-kernel artefacts: dtbo, decon device tree, and the
+# in-bootimg dtb. The new tree has none of these yet, so leaving them
+# enabled would have the build look for files that don't exist.
+BOARD_KERNEL_SEPARATED_DTBO :=
+BOARD_INCLUDE_DTB_IN_BOOTIMG :=
+BOARD_DTB_CFG :=
+BOARD_DTBO_CFG :=
+# Rebuild MKBOOTIMG_ARGS without `--dtb_offset` — mkbootimg refuses to
+# emit a header v2 boot.img with that offset set unless an actual DTB
+# is also passed via `--dtb`. We have no DTB yet at this Phase 2 stage.
+# Drop to boot.img header version 1: header v2 mandates a DTB section
+# (mkbootimg refuses an empty one), and we don't have a DTB yet. v1 has
+# no DTB section. This image won't boot on the BL (which expects v2),
+# but Phase 2 only requires "packs into boot.img" — booting is later.
+BOARD_BOOTIMG_HEADER_VERSION := 1
+BOARD_MKBOOTIMG_ARGS := --base $(BOARD_KERNEL_BASE)
+BOARD_MKBOOTIMG_ARGS += --pagesize $(BOARD_KERNEL_PAGESIZE)
+BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_TAGS_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
+BOARD_MKBOOTIMG_ARGS += --second_offset $(BOARD_SECOND_OFFSET)
+endif
