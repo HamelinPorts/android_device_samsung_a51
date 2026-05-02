@@ -98,6 +98,11 @@ PRODUCT_PACKAGES += \
 # SamsungImsModemBridge talks to.
 PRODUCT_PACKAGES += imsd
 
+# Early-init helper that routes the next reboot to recovery whenever the
+# previous boot ended in a kernel panic. Bring-up infrastructure for the
+# kernel rebase plan; harmless on stable builds (exits 0 when no panic).
+PRODUCT_PACKAGES += panic_to_recovery
+
 # Force VoLTE/VT/WFC platform availability flags on. The A14 AIDL RIL on this
 # device under-reports LteVopsSupportInfo.mVopsSupport=NOT_SUPPORTED on cells
 # where VoLTE actually works, which gates ImsManager.isVolteEnabledByPlatform().

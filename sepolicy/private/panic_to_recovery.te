@@ -1,0 +1,20 @@
+# Early-init helper that routes a post-panic reboot into recovery via
+# bootstat's sys.boot.reason and Android's standard sys.powerctl path.
+# No misc-block-device writes, no pstorefs reads — both are gated by
+# tight AOSP neverallows that we deliberately don't want to fight.
+
+type panic_to_recovery, domain, coredomain;
+type panic_to_recovery_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(panic_to_recovery)
+
+# Read sys.boot.reason as set by bootstat. Cannot read
+# bootloader_boot_reason_prop (ro.boot.bootreason) directly — AOSP
+# neverallow restricts that to a tight allowlist (bootstat, init,
+# system_server, dumpstate, recovery, shell, …) that we deliberately
+# don't join.
+get_prop(panic_to_recovery, system_boot_reason_prop)
+
+# Trigger the recovery reboot. Init catches sys.powerctl=reboot,recovery,
+# writes bootloader_message ("boot-recovery") to misc, syncs, and reboots.
+set_prop(panic_to_recovery, powerctl_prop)

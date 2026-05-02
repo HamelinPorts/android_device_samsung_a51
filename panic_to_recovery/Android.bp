@@ -1,0 +1,6 @@
+cc_binary {
+    name: "panic_to_recovery",
+    srcs: ["panic_to_recovery.c"],
+    cflags: ["-Wall", "-Werror"],
+    init_rc: ["panic_to_recovery.rc"],
+}

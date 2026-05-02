@@ -1,0 +1,12 @@
+# Fires whenever sys.boot.reason becomes any non-empty value. Bootstat
+# sets it during boot — early via the `on post-fs && property:ro.boot.bootreason`
+# action in bootstat.rc when ro.boot.bootreason is non-empty, and later
+# refined via `bootstat --set_system_boot_reason` at
+# ro.persistent_properties.ready=true. By using a property trigger we run
+# AFTER the value is populated; using `on post-fs-data` runs *before*,
+# while sys.boot.reason is still empty.
+#
+# The binary itself short-circuits cheaply on non-panic values, so it's
+# safe to fire on every transition.
+on property:sys.boot.reason=*
+    exec - root root -- /system/bin/panic_to_recovery

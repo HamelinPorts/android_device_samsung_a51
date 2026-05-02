@@ -1,0 +1,1 @@
+/system/bin/panic_to_recovery     u:object_r:panic_to_recovery_exec:s0
