@@ -73,27 +73,19 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 # Daily-driver builds leave USE_KERNEL_NEXT unset → existing kernel.
 ifeq ($(USE_KERNEL_NEXT),true)
 TARGET_KERNEL_SOURCE := kernel/samsung/universal9611-next
-TARGET_KERNEL_CONFIG := gki_defconfig
-# Disable old-kernel artefacts: dtbo, decon device tree, and the
-# in-bootimg dtb. The new tree has none of these yet, so leaving them
-# enabled would have the build look for files that don't exist.
+TARGET_KERNEL_CONFIG := gki_defconfig exynos9611-a51.config
+# Phase 3 Tier 1: include the minimal exynos9611-a51 DTB in boot.img
+# (mainline pattern, single .dtb concatenated into the boot.img DTB
+# section). The 4.14 tree's per-revision dtbo overlays are NOT yet
+# carried over, so dtbo packing stays disabled. BOARD_DTB_CFG also
+# stays empty — that variable points at the legacy dtbo manifest.
 BOARD_KERNEL_SEPARATED_DTBO :=
-BOARD_INCLUDE_DTB_IN_BOOTIMG :=
-BOARD_DTB_CFG :=
 BOARD_DTBO_CFG :=
-# Rebuild MKBOOTIMG_ARGS without `--dtb_offset` — mkbootimg refuses to
-# emit a header v2 boot.img with that offset set unless an actual DTB
-# is also passed via `--dtb`. We have no DTB yet at this Phase 2 stage.
-# Drop to boot.img header version 1: header v2 mandates a DTB section
-# (mkbootimg refuses an empty one), and we don't have a DTB yet. v1 has
-# no DTB section. This image won't boot on the BL (which expects v2),
-# but Phase 2 only requires "packs into boot.img" — booting is later.
-BOARD_BOOTIMG_HEADER_VERSION := 1
-BOARD_MKBOOTIMG_ARGS := --base $(BOARD_KERNEL_BASE)
-BOARD_MKBOOTIMG_ARGS += --pagesize $(BOARD_KERNEL_PAGESIZE)
-BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_TAGS_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
-BOARD_MKBOOTIMG_ARGS += --second_offset $(BOARD_SECOND_OFFSET)
+BOARD_DTB_CFG :=
+BOARD_INCLUDE_DTB_IN_BOOTIMG := true
+TARGET_DTB_LIST_WILDCARD := exynos/exynos9611-a51
+# Header v2 is what the A51 bootloader expects. Now that we have a
+# DTB to pass, mkbootimg's empty-DTB rejection no longer triggers and
+# we can stay on v2.
+BOARD_BOOTIMG_HEADER_VERSION := 2
 endif
