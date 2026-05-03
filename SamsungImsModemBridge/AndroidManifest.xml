@@ -3,7 +3,22 @@
     package="org.hamelinports.samsung.ims"
     android:sharedUserId="android.uid.system">
 
+    <!-- Run inside HamelinPortsImsService's process so this APK never has
+         its own ActivityThread.handleBindApplication on boot. Avoids the
+         system-uid Log.wtf in ContextImpl.getDataDir during the boot-time
+         binder-contention window — that wtf reentrantly hits
+         system_server's handleApplicationWtf while we're still inside
+         bindApplication, blowing past the 15 s startup timeout and
+         causing AM to declare APP_CRASH on every boot since the rebrand.
+         HamelinPortsImsService already has a live process by the time
+         it bindService()'s us, so AM reuses that process and just
+         delivers onCreate here — no second bindApplication, no race.
+         Works because both packages share UID (android.uid.system) and
+         the platform certificate; LoadedApk is per-package so this
+         APK's classes are loaded into the existing process via its own
+         ClassLoader on first bind. -->
     <application
+        android:process="org.hamelinports.ims"
         android:label="SamsungImsModemBridge"
         android:allowBackup="false"
         android:directBootAware="true">
