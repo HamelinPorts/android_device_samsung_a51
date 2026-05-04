@@ -81,11 +81,44 @@ TARGET_KERNEL_CONFIG := gki_defconfig exynos9611-a51.config
 # stays empty — that variable points at the legacy dtbo manifest.
 BOARD_KERNEL_SEPARATED_DTBO :=
 BOARD_DTBO_CFG :=
-BOARD_DTB_CFG :=
+# Use Samsung's mkdtboimg-cfg-format DTB image (single-entry table with
+# custom0/custom1 board-revision keys). The Samsung bootloader rejects
+# a raw concatenated .dtb in the boot.img DTB section with `DT LOAD
+# Fail / header check fail`; it expects the table header. Verified on
+# A51 BL A515FXXU8HVI3, 2026-05-03.
+BOARD_DTB_CFG := $(DEVICE_PATH)/configs/kernel/exynos9611-next.cfg
 BOARD_INCLUDE_DTB_IN_BOOTIMG := true
-TARGET_DTB_LIST_WILDCARD := exynos/exynos9611-a51
+TARGET_DTB_LIST_WILDCARD := exynos/exynos9610
 # Header v2 is what the A51 bootloader expects. Now that we have a
 # DTB to pass, mkbootimg's empty-DTB rejection no longer triggers and
 # we can stay on v2.
 BOARD_BOOTIMG_HEADER_VERSION := 2
+
+# Phase 3 Tier 4 / ramboot adb: pack recovery's ramdisk into boot.img
+# so the new 6.12 kernel boots straight into a recovery-style
+# userspace that already has adbd + the USB CDC gadget composition.
+# Without this, USE_KERNEL_NEXT=true builds boot a kernel with an
+# empty bring-up ramdisk (no adbd) -> no way to talk to the device
+# from a host.
+#
+# BOARD_USES_RECOVERY_AS_BOOT=true makes the build system pack the
+# recovery ramdisk as the boot.img ramdisk -- same mechanism Pixel
+# devices use for A/B boot.  Only the USE_KERNEL_NEXT path opts in;
+# daily-driver builds (USE_KERNEL_NEXT unset) continue to ship the
+# normal split boot.img + recovery.img pair.
+BOARD_USES_RECOVERY_AS_BOOT := true
+# We don't pack a recovery DTBO (BOARD_DTBO_CFG and
+# BOARD_KERNEL_SEPARATED_DTBO are empty above for the same reason
+# — the legacy 4.14 dtbo overlays are not forward-ported).  The
+# parent BoardConfigCommon.mk for universal9611-common sets
+# BOARD_INCLUDE_RECOVERY_DTBO := true unconditionally, and
+# build/make/core/Makefile gates the --recovery_dtbo mkbootimg flag
+# on `ifdef BOARD_INCLUDE_RECOVERY_DTBO` — which is truthy as long
+# as the variable is defined to anything (including "false"!).
+# Clearing to empty makes `ifdef` evaluate false (GNU Make: ifdef
+# is true only for non-empty values).  `undefine` directive is not
+# supported by kati so plain assignment to empty is the portable
+# form.  Confirmed correct: kati passes the empty value back through
+# product configuration; the --recovery_dtbo flag is then skipped.
+BOARD_INCLUDE_RECOVERY_DTBO :=
 endif
