@@ -121,4 +121,12 @@ BOARD_USES_RECOVERY_AS_BOOT := true
 # form.  Confirmed correct: kati passes the empty value back through
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
+
+# Phase 3 ramboot diagnostics: earlycon=ram disabled while head.S
+# landmark instrumentation is active.  Earlycon's setup writes the
+# "[ramcon] earlycon ready" banner from offset 0 of log_kernel, which
+# would clobber the head.S landmark bytes (also at offsets 0..6).  When
+# the kernel reaches parse_early_param (= all 7 landmarks make it),
+# re-enable this line for full early-boot logging:
+# BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x200000
 endif
