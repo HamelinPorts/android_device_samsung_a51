@@ -122,11 +122,11 @@ BOARD_USES_RECOVERY_AS_BOOT := true
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
 
-# Phase 3 ramboot diagnostics: earlycon=ram disabled while head.S
-# landmark instrumentation is active.  Earlycon's setup writes the
-# "[ramcon] earlycon ready" banner from offset 0 of log_kernel, which
-# would clobber the head.S landmark bytes (also at offsets 0..6).  When
-# the kernel reaches parse_early_param (= all 7 landmarks make it),
-# re-enable this line for full early-boot logging:
-# BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x200000
+# Phase 3 ramboot diagnostics: earlycon=ram is now ACTIVE — the asm
+# landmark bisect (head.S) confirmed the kernel reaches `bl start_kernel`,
+# meaning printk inside start_kernel needs an active console, and
+# earlycon-ram is what surfaces it via log_kernel + /proc/last_kmsg in
+# recovery.  The earlycon-ram driver stamps DSS metadata (curr_ptr +
+# magic_key) so the recovery BSP reader exposes the writes correctly.
+BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x200000
 endif
