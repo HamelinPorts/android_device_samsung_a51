@@ -122,13 +122,15 @@ BOARD_USES_RECOVERY_AS_BOOT := true
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
 
-# 2026-05-07: earlycon=ram is OFF by default — sec_log_kernel
-# (CONFIG_SEC_DEBUG_LAST_KMSG=y) is the active writer to the
-# log_kernel region.  The driver stays compiled in via
-# CONFIG_SERIAL_EARLYCON_RAM=y; to re-enable for early-boot diag,
-# uncomment the BOARD_KERNEL_CMDLINE line below AND uncomment the
-# earlycon= argument in DTS chosen/bootargs.
-# BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
+# earlycon=ram drives the RAM-backed earlycon at 0xF9010000, the
+# Samsung debug-snapshot,log_kernel reserved region.  This is the
+# active log_kernel writer for the kernel rebase: single-writer
+# (no race with sec_log_kernel which is compiled but not registered),
+# NC mapping (writes hit DRAM directly so warm-reset → 4.14 recovery
+# /proc/last_kmsg sees them), activates at parse_early_param so we
+# capture printk from very early in boot.  Size 0x40000 (256 KiB) is
+# the max early_memremap() will accept on arm64 (NR_FIX_BTMAPS).
+BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
 
 # Phase 3 bring-up: disable secondary CPU bringup entirely.  smp_init()
 # hangs after CPU1/CPU3 fail to come online (PSCI / cal-if / clocks not
