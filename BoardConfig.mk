@@ -122,11 +122,17 @@ BOARD_USES_RECOVERY_AS_BOOT := true
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
 
-# Phase 3 ramboot diagnostics: earlycon=ram is now ACTIVE — the asm
-# landmark bisect (head.S) confirmed the kernel reaches `bl start_kernel`,
-# meaning printk inside start_kernel needs an active console, and
-# earlycon-ram is what surfaces it via log_kernel + /proc/last_kmsg in
-# recovery.  The earlycon-ram driver stamps DSS metadata (curr_ptr +
-# magic_key) so the recovery BSP reader exposes the writes correctly.
-BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x200000
+# 2026-05-07: earlycon=ram is OFF by default — sec_log_kernel
+# (CONFIG_SEC_DEBUG_LAST_KMSG=y) is the active writer to the
+# log_kernel region.  The driver stays compiled in via
+# CONFIG_SERIAL_EARLYCON_RAM=y; to re-enable for early-boot diag,
+# uncomment the BOARD_KERNEL_CMDLINE line below AND uncomment the
+# earlycon= argument in DTS chosen/bootargs.
+# BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
+
+# Phase 3 bring-up: disable secondary CPU bringup entirely.  smp_init()
+# hangs after CPU1/CPU3 fail to come online (PSCI / cal-if / clocks not
+# fully wired up yet).  Boot CPU0-only so we can reach userspace; revisit
+# secondary CPU bringup in a later phase once cal-if + PSCI are sound.
+BOARD_KERNEL_CMDLINE += nosmp
 endif
