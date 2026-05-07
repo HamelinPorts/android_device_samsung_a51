@@ -137,4 +137,16 @@ BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
 # fully wired up yet).  Boot CPU0-only so we can reach userspace; revisit
 # secondary CPU bringup in a later phase once cal-if + PSCI are sound.
 BOARD_KERNEL_CMDLINE += nosmp
+
+# Phase 3 bring-up: bypass `loglevel=4` injected by the bootloader/DT
+# chosen bootargs.  GKI's `loglevel=4` filters everything below
+# KERN_WARNING out of the registered consoles (incl. our earlycon-ram),
+# which silences the entire SCSI/sd subsystem (`scsi 0:0:0:0:
+# Direct-Access ...`, `sd 0:0:0:0: [sda] ...`) -- those prints are
+# KERN_NOTICE (level 5) and KERN_INFO (level 6).  Without them in
+# /proc/last_kmsg we can't tell why /dev/sda doesn't appear and init
+# wedges on missing /dev/block/by-name/*.  `ignore_loglevel` makes
+# every printk reach every console regardless of level; revert once
+# bring-up stabilises.
+BOARD_KERNEL_CMDLINE += ignore_loglevel
 endif
