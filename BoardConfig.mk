@@ -149,4 +149,13 @@ BOARD_KERNEL_CMDLINE += nosmp
 # every printk reach every console regardless of level; revert once
 # bring-up stabilises.
 BOARD_KERNEL_CMDLINE += ignore_loglevel
+
+# Phase 3 diagnostic: turn on every dev_dbg / pr_debug at boot so we
+# can see which step of the SCSI bringup chain stalls.  Verbose, but
+# the log_kernel buffer is 2 MiB so it absorbs the volume.  Pairs with
+# CONFIG_DYNAMIC_DEBUG=y in the kernel fragment.  Drop once /dev/sda
+# is reliably exposed and partitions mount.  Single token (no spaces /
+# quotes / semicolons) to keep soong's variables-file JSON parsing
+# happy when this gets serialised through PRODUCT_BOARD_KERNEL_CMDLINE.
+BOARD_KERNEL_CMDLINE += dyndbg=+p
 endif
