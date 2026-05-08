@@ -158,4 +158,25 @@ BOARD_KERNEL_CMDLINE += ignore_loglevel
 # quotes / semicolons) to keep soong's variables-file JSON parsing
 # happy when this gets serialised through PRODUCT_BOARD_KERNEL_CMDLINE.
 BOARD_KERNEL_CMDLINE += dyndbg=+p
+
+# hardware/samsung_slsi-linaro/config/BoardConfig9610.mk hardcodes
+# TARGET_LINUX_KERNEL_VERSION := 4.14, which gates two things:
+#  - hardware/samsung_slsi-linaro/exynos/kernel-$(VER)-headers/ — the
+#    UAPI headers exposed to vendor blobs
+#  - hardware/samsung_slsi-linaro/config/openmax.mk — sets the soong
+#    config flag MAINLINE_FEATURE_IN_SINCE_4_19=true when the kernel
+#    is >= 4.19, which guards the vendor's exynos_mfc_media.h against
+#    redefining V4L2_CID_MPEG_VIDEO_HEVC_*/v4l2_mpeg_video_hevc_* enums
+#    that mainline 6.12 already provides via linux/v4l2-controls.h.
+#
+# openmax.mk is included from samsung_slsi-linaro's BoardConfigCommon.mk
+# *during* the BoardConfig9610.mk include chain, so by the time control
+# returns here the soong_config flag has already been frozen to "false"
+# (because TARGET_LINUX_KERNEL_VERSION was 4.14 at that moment).  Set
+# both the variable for any later evaluations *and* re-publish the
+# soong_config flag explicitly here.  6.1 is the closest kernel-headers
+# tree shipped under hardware/samsung_slsi-linaro/exynos/kernel-*-headers/.
+TARGET_LINUX_KERNEL_VERSION := 6.1
+TARGET_BOARD_KERNEL_HEADERS := hardware/samsung_slsi-linaro/exynos/kernel-$(TARGET_LINUX_KERNEL_VERSION)-headers/kernel-headers
+$(call soong_config_set_bool,openmax,MAINLINE_FEATURE_IN_SINCE_4_19,true)
 endif
