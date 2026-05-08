@@ -132,11 +132,12 @@ BOARD_INCLUDE_RECOVERY_DTBO :=
 # the max early_memremap() will accept on arm64 (NR_FIX_BTMAPS).
 BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
 
-# Phase 3 bring-up: disable secondary CPU bringup entirely.  smp_init()
-# hangs after CPU1/CPU3 fail to come online (PSCI / cal-if / clocks not
-# fully wired up yet).  Boot CPU0-only so we can reach userspace; revisit
-# secondary CPU bringup in a later phase once cal-if + PSCI are sound.
-BOARD_KERNEL_CMDLINE += nosmp
+# Phase 3 bring-up: `nosmp` was set as a workaround because smp_init()
+# hung on CPU1/CPU3 due to incomplete cal-if/PSCI/clock wiring.  cal-if
+# has since been forward-ported (kernel commit 4afc1204ea50 — see
+# project_a51_calif_forward_port memory), so secondary-CPU bringup
+# should work now.  Foundation F1: drop nosmp + verify all 8 cores
+# come online cleanly.
 
 # Phase 3 bring-up: bypass `loglevel=4` injected by the bootloader/DT
 # chosen bootargs.  GKI's `loglevel=4` filters everything below
