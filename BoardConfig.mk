@@ -94,6 +94,15 @@ TARGET_DTB_LIST_WILDCARD := exynos/exynos9610
 # we can stay on v2.
 BOARD_BOOTIMG_HEADER_VERSION := 2
 
+# Foundation F5 attempted Image.gz to fit a KASAN-inflated kernel into
+# the 61 MB boot partition.  The Samsung A515FXXU8HVI3 BL rejected
+# the gzipped image: device went silent, no earlycon-ram recovery
+# fired (kernel never started), required odin4 to recover.  Revert
+# to uncompressed Image until we either (a) confirm a different
+# compression mode the BL accepts (lz4? lzma?), or (b) shrink the
+# kernel via lighter KASAN config.
+# BOARD_KERNEL_IMAGE_NAME := Image.gz
+
 # Phase 3 Tier 4 / ramboot adb: pack recovery's ramdisk into boot.img
 # so the new 6.12 kernel boots straight into a recovery-style
 # userspace that already has adbd + the USB CDC gadget composition.
@@ -159,6 +168,9 @@ BOARD_KERNEL_CMDLINE += ignore_loglevel
 # quotes / semicolons) to keep soong's variables-file JSON parsing
 # happy when this gets serialised through PRODUCT_BOARD_KERNEL_CMDLINE.
 BOARD_KERNEL_CMDLINE += dyndbg=+p
+# Note: A515 BL strips the boot.img cmdline and supplies its own —
+# any panic= here is dropped at runtime.  CONFIG_PANIC_TIMEOUT=1 in
+# the kernel config fragment handles the auto-reboot side instead.
 
 # hardware/samsung_slsi-linaro/config/BoardConfig9610.mk hardcodes
 # TARGET_LINUX_KERNEL_VERSION := 4.14, which gates two things:
