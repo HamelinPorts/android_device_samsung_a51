@@ -160,14 +160,13 @@ BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
 # bring-up stabilises.
 BOARD_KERNEL_CMDLINE += ignore_loglevel
 
-# Phase 3 diagnostic: turn on every dev_dbg / pr_debug at boot so we
-# can see which step of the SCSI bringup chain stalls.  Verbose, but
-# the log_kernel buffer is 2 MiB so it absorbs the volume.  Pairs with
-# CONFIG_DYNAMIC_DEBUG=y in the kernel fragment.  Drop once /dev/sda
-# is reliably exposed and partitions mount.  Single token (no spaces /
-# quotes / semicolons) to keep soong's variables-file JSON parsing
-# happy when this gets serialised through PRODUCT_BOARD_KERNEL_CMDLINE.
-BOARD_KERNEL_CMDLINE += dyndbg=+p
+# Phase 3 diagnostic dyndbg=+p was added to debug SCSI bringup; UFS
+# now probes reliably (/dev/sda exposed, partitions mount), so per
+# the original drop-rule we remove it.  Side effect: the regulator
+# subsystem's "Failed to create debugfs directory" pr_debug is no
+# longer emitted at KERN_WARNING, and the log_kernel volume drops
+# from 2 MiB-grade to 100 KiB-grade per boot.
+# BOARD_KERNEL_CMDLINE += dyndbg=+p
 # Note: A515 BL strips the boot.img cmdline and supplies its own —
 # any panic= here is dropped at runtime.  CONFIG_PANIC_TIMEOUT=1 in
 # the kernel config fragment handles the auto-reboot side instead.
