@@ -160,6 +160,16 @@ BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
 # bring-up stabilises.
 BOARD_KERNEL_CMDLINE += ignore_loglevel
 
+# Dedicated CPU1 watchdog: isolate CPU1 from the scheduler/timer tick so
+# our cpu1-wd kthread (kernel/samsung/universal9611-next/drivers/tty/serial/earlycon-ram.c)
+# runs uninterrupted until its deadline, then fires PMU SWRESET.  Build47/48
+# showed that any wait >1 s with CPU1 still under the normal scheduler hangs
+# silently — pattern matches a hotplug-park/migration or RT-throttle landing
+# in an idle state that doesn't resume.  isolcpus=1 + nohz_full=1 + IRQ-off
+# inside the kthread fixes that by making CPU1 effectively bare-metal once
+# the watchdog enters its loop.
+BOARD_KERNEL_CMDLINE += isolcpus=1 nohz_full=1 rcu_nocbs=1
+
 # Phase 3 diagnostic dyndbg=+p was added to debug SCSI bringup; UFS
 # now probes reliably (/dev/sda exposed, partitions mount), so per
 # the original drop-rule we remove it.  Side effect: the regulator
