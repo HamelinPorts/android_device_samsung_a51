@@ -103,19 +103,23 @@ BOARD_BOOTIMG_HEADER_VERSION := 2
 # kernel via lighter KASAN config.
 # BOARD_KERNEL_IMAGE_NAME := Image.gz
 
-# Phase 3 Tier 4 / ramboot adb: pack recovery's ramdisk into boot.img
-# so the new 6.12 kernel boots straight into a recovery-style
-# userspace that already has adbd + the USB CDC gadget composition.
-# Without this, USE_KERNEL_NEXT=true builds boot a kernel with an
-# empty bring-up ramdisk (no adbd) -> no way to talk to the device
-# from a host.
+# 2026-05-18 Phase 5.1: dropped BOARD_USES_RECOVERY_AS_BOOT.
 #
-# BOARD_USES_RECOVERY_AS_BOOT=true makes the build system pack the
-# recovery ramdisk as the boot.img ramdisk -- same mechanism Pixel
-# devices use for A/B boot.  Only the USE_KERNEL_NEXT path opts in;
-# daily-driver builds (USE_KERNEL_NEXT unset) continue to ship the
-# normal split boot.img + recovery.img pair.
-BOARD_USES_RECOVERY_AS_BOOT := true
+# Earlier (Phase 3 Tier 4) we packed the recovery ramdisk into
+# boot.img to get adbd + USB CDC gadget up in the bring-up window.
+# That's now redundant — Phase 5.3's IO path works (FMP SMC
+# handshake + 4 KiB DMA constraints + BROKEN_OCS_FATAL_ERROR strip
+# landed in universal9611-next 2026-05-18) so first-stage init can
+# attempt to mount /metadata, /system, /vendor, and we'd like to
+# observe how far it actually gets before hitting the next blocker.
+#
+# With this set to false, the build produces a regular boot.img
+# with the first-stage init ramdisk (not recovery's), and a
+# separate recovery.img.  If first-stage init hangs before adbd
+# comes up, the CPU7 watchdog (60 s) + bouncer chain still routes
+# /boot → /recovery and 4.14 captures /proc/last_cachedump_kmsg
+# for inspection.
+BOARD_USES_RECOVERY_AS_BOOT := false
 # We don't pack a recovery DTBO (BOARD_DTBO_CFG and
 # BOARD_KERNEL_SEPARATED_DTBO are empty above for the same reason
 # — the legacy 4.14 dtbo overlays are not forward-ported).  The
