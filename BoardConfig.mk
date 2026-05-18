@@ -131,15 +131,27 @@ BOARD_USES_RECOVERY_AS_BOOT := true
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
 
-# earlycon=ram drives the RAM-backed earlycon at 0xF9010000, the
-# Samsung debug-snapshot,log_kernel reserved region.  This is the
-# active log_kernel writer for the kernel rebase: single-writer
-# (no race with sec_log_kernel which is compiled but not registered),
-# NC mapping (writes hit DRAM directly so warm-reset → 4.14 recovery
-# /proc/last_kmsg sees them), activates at parse_early_param so we
-# capture printk from very early in boot.  Size 0x40000 (256 KiB) is
-# the max early_memremap() will accept on arm64 (NR_FIX_BTMAPS).
-BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9010000,0x40000
+# earlycon=ram drives the RAM-backed earlycon at 0xF9810000, the
+# Samsung debug-snapshot `log_cachedump` reserved region (8 MiB,
+# persist=true, grown from upstream's 1 MiB — see
+# DSS_LOG_CACHEDUMP_SIZE in
+# kernel/samsung/universal9611{,-next}/include/dt-bindings/soc/
+# samsung/debug-snapshot-table.h).  We moved off `log_kernel`
+# (0xF9010000, 2 MiB) to escape the pollution by 4.14 recovery's
+# own boot printk: dss_items marks log_cachedump persist=true so
+# dbg_snapshot_init does NOT memset it on recovery boot, AND the
+# 4.14 kernel doesn't write to it during normal boot.  Result:
+# 6.12 ramcon output survives the warm reset untouched.  Reader on
+# 4.14 side is drivers/samsung/debug/sec_debug_cachedump.c, exposed
+# as /proc/last_cachedump_kmsg.
+#
+# Source of truth for the address/size pair is
+# kernel/samsung/universal9611-next/include/linux/a51_ramcon.h;
+# this cmdline parameter must match its A51_RAMCON_PHYS /
+# A51_RAMCON_SIZE.  ramcon_setup caps the initial early_memremap
+# window to 256 KiB (NR_FIX_BTMAPS limit) and ramcon_upgrade then
+# re-maps the full region via memremap(MEMREMAP_WB).
+BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9810000,0x800000
 
 # Phase 3 bring-up: `nosmp` was set as a workaround because smp_init()
 # hung on CPU1/CPU3 due to incomplete cal-if/PSCI/clock wiring.  cal-if
