@@ -76,11 +76,16 @@ TARGET_KERNEL_SOURCE := kernel/samsung/universal9611-next
 TARGET_KERNEL_CONFIG := gki_defconfig exynos9611-a51.config
 # Phase 3 Tier 1: include the minimal exynos9611-a51 DTB in boot.img
 # (mainline pattern, single .dtb concatenated into the boot.img DTB
-# section). The 4.14 tree's per-revision dtbo overlays are NOT yet
-# carried over, so dtbo packing stays disabled. BOARD_DTB_CFG also
-# stays empty — that variable points at the legacy dtbo manifest.
-BOARD_KERNEL_SEPARATED_DTBO :=
-BOARD_DTBO_CFG :=
+# section).
+#
+# 2026-05-19 update: the A51 dtbo overlay source files are now
+# forward-ported into universal9611-next/arch/arm64/boot/dts/exynos/
+# (commit landing alongside this BoardConfig change), so dtbo build
+# under USE_KERNEL_NEXT=true is RE-ENABLED.  We inherit BOARD_DTBO_CFG
+# and BOARD_KERNEL_SEPARATED_DTBO from BoardConfigCommon.mk (the
+# device/samsung/universal9611-common/configs/kernel/a51.cfg manifest
+# lists the four EUR_OPEN per-revision .dtbo entries + custom0/custom1
+# board-revision keys).
 # Use Samsung's mkdtboimg-cfg-format DTB image (single-entry table with
 # custom0/custom1 board-revision keys). The Samsung bootloader rejects
 # a raw concatenated .dtb in the boot.img DTB section with `DT LOAD
@@ -120,10 +125,12 @@ BOARD_BOOTIMG_HEADER_VERSION := 2
 # /boot → /recovery and 4.14 captures /proc/last_cachedump_kmsg
 # for inspection.
 BOARD_USES_RECOVERY_AS_BOOT := false
-# We don't pack a recovery DTBO (BOARD_DTBO_CFG and
-# BOARD_KERNEL_SEPARATED_DTBO are empty above for the same reason
-# — the legacy 4.14 dtbo overlays are not forward-ported).  The
-# parent BoardConfigCommon.mk for universal9611-common sets
+# We don't pack a recovery DTBO.  The main dtbo (a51.cfg) is built
+# from the forward-ported overlays in universal9611-next as of
+# 2026-05-19, but recovery still runs the 4.14 kernel which has its
+# own dtbo handling — we don't need a recovery-specific dtbo entry.
+#
+# The parent BoardConfigCommon.mk for universal9611-common sets
 # BOARD_INCLUDE_RECOVERY_DTBO := true unconditionally, and
 # build/make/core/Makefile gates the --recovery_dtbo mkbootimg flag
 # on `ifdef BOARD_INCLUDE_RECOVERY_DTBO` — which is truthy as long
