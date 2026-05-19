@@ -142,67 +142,14 @@ BOARD_USES_RECOVERY_AS_BOOT := false
 # product configuration; the --recovery_dtbo flag is then skipped.
 BOARD_INCLUDE_RECOVERY_DTBO :=
 
-# earlycon=ram drives the RAM-backed earlycon at 0xF9810000, the
-# Samsung debug-snapshot `log_cachedump` reserved region (8 MiB,
-# persist=true, grown from upstream's 1 MiB — see
-# DSS_LOG_CACHEDUMP_SIZE in
-# kernel/samsung/universal9611{,-next}/include/dt-bindings/soc/
-# samsung/debug-snapshot-table.h).  We moved off `log_kernel`
-# (0xF9010000, 2 MiB) to escape the pollution by 4.14 recovery's
-# own boot printk: dss_items marks log_cachedump persist=true so
-# dbg_snapshot_init does NOT memset it on recovery boot, AND the
-# 4.14 kernel doesn't write to it during normal boot.  Result:
-# 6.12 ramcon output survives the warm reset untouched.  Reader on
-# 4.14 side is drivers/samsung/debug/sec_debug_cachedump.c, exposed
-# as /proc/last_cachedump_kmsg.
-#
-# Source of truth for the address/size pair is
-# kernel/samsung/universal9611-next/include/linux/a51_ramcon.h;
-# this cmdline parameter must match its A51_RAMCON_PHYS /
-# A51_RAMCON_SIZE.  ramcon_setup caps the initial early_memremap
-# window to 256 KiB (NR_FIX_BTMAPS limit) and ramcon_upgrade then
-# re-maps the full region via memremap(MEMREMAP_WB).
-BOARD_KERNEL_CMDLINE += earlycon=ram,mmio32,0xF9810000,0x800000
+# 2026-05-20: kernel cmdline lives in the dts chosen.bootargs +
+# CONFIG_CMDLINE_FROM_BOOTLOADER=y (see exynos9611-a51.config).  The
+# Samsung A515 BL doesn't relay boot.img header BOARD_KERNEL_CMDLINE
+# to the kernel — additions here are silently dropped.  Keeping any
+# BOARD_KERNEL_CMDLINE += line in the legacy boot.img header is just
+# documentation drift, so the active earlycon/console/watchdog args
+# moved into universal9611-next/arch/arm64/boot/dts/exynos/exynos9610.dts.
 
-# Phase 3 bring-up: `nosmp` was set as a workaround because smp_init()
-# hung on CPU1/CPU3 due to incomplete cal-if/PSCI/clock wiring.  cal-if
-# has since been forward-ported (kernel commit 4afc1204ea50 — see
-# project_a51_calif_forward_port memory), so secondary-CPU bringup
-# should work now.  Foundation F1: drop nosmp + verify all 8 cores
-# come online cleanly.
-
-# Phase 3 bring-up: bypass `loglevel=4` injected by the bootloader/DT
-# chosen bootargs.  GKI's `loglevel=4` filters everything below
-# KERN_WARNING out of the registered consoles (incl. our earlycon-ram),
-# which silences the entire SCSI/sd subsystem (`scsi 0:0:0:0:
-# Direct-Access ...`, `sd 0:0:0:0: [sda] ...`) -- those prints are
-# KERN_NOTICE (level 5) and KERN_INFO (level 6).  Without them in
-# /proc/last_kmsg we can't tell why /dev/sda doesn't appear and init
-# wedges on missing /dev/block/by-name/*.  `ignore_loglevel` makes
-# every printk reach every console regardless of level; revert once
-# bring-up stabilises.
-BOARD_KERNEL_CMDLINE += ignore_loglevel
-
-# Dedicated CPU1 watchdog: isolate CPU1 from the scheduler/timer tick so
-# our cpu1-wd kthread (kernel/samsung/universal9611-next/drivers/tty/serial/earlycon-ram.c)
-# runs uninterrupted until its deadline, then fires PMU SWRESET.  Build47/48
-# showed that any wait >1 s with CPU1 still under the normal scheduler hangs
-# silently — pattern matches a hotplug-park/migration or RT-throttle landing
-# in an idle state that doesn't resume.  isolcpus=1 + nohz_full=1 + IRQ-off
-# inside the kthread fixes that by making CPU1 effectively bare-metal once
-# the watchdog enters its loop.
-BOARD_KERNEL_CMDLINE += isolcpus=1 nohz_full=1 rcu_nocbs=1
-
-# Phase 3 diagnostic dyndbg=+p was added to debug SCSI bringup; UFS
-# now probes reliably (/dev/sda exposed, partitions mount), so per
-# the original drop-rule we remove it.  Side effect: the regulator
-# subsystem's "Failed to create debugfs directory" pr_debug is no
-# longer emitted at KERN_WARNING, and the log_kernel volume drops
-# from 2 MiB-grade to 100 KiB-grade per boot.
-# BOARD_KERNEL_CMDLINE += dyndbg=+p
-# Note: A515 BL strips the boot.img cmdline and supplies its own —
-# any panic= here is dropped at runtime.  CONFIG_PANIC_TIMEOUT=1 in
-# the kernel config fragment handles the auto-reboot side instead.
 
 # hardware/samsung_slsi-linaro/config/BoardConfig9610.mk hardcodes
 # TARGET_LINUX_KERNEL_VERSION := 4.14, which gates two things:
