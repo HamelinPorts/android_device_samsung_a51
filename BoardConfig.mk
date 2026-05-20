@@ -102,11 +102,15 @@ BOARD_BOOTIMG_HEADER_VERSION := 2
 # Foundation F5 attempted Image.gz to fit a KASAN-inflated kernel into
 # the 61 MB boot partition.  The Samsung A515FXXU8HVI3 BL rejected
 # the gzipped image: device went silent, no earlycon-ram recovery
-# fired (kernel never started), required odin4 to recover.  Revert
-# to uncompressed Image until we either (a) confirm a different
-# compression mode the BL accepts (lz4? lzma?), or (b) shrink the
-# kernel via lighter KASAN config.
-# BOARD_KERNEL_IMAGE_NAME := Image.gz
+# fired (kernel never started), required odin4 to recover.
+#
+# 2026-05-20: switched to in-tree Image.zinflate — a self-decompressing
+# wrapper (arch/arm64/boot/zinflate/ + inform4_bouncer.S peer module)
+# whose own arm64 Image header is BL-acceptable and which decompresses
+# a zstd-compressed kernel into the standard load address before
+# branching to it.  Built automatically by Kbuild as part of `mka
+# bootimage` via the Image.zinflate target in arch/arm64/boot/Makefile.
+BOARD_KERNEL_IMAGE_NAME := Image.zinflate
 
 # 2026-05-18 Phase 5.1: dropped BOARD_USES_RECOVERY_AS_BOOT.
 #
