@@ -111,3 +111,19 @@ PRODUCT_PACKAGES += panic_to_recovery
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.volte_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.vt_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.wfc_avail_ovr=1
+
+# GWP-ASan heap-corruptor hunt on system_server (task #41, transient diagnostic).
+# A DebugStore abort in free() is a canary for an external heap overflow in
+# system_server's address space; arming GWP-ASan traps the overflow at write
+# time (alloc + fault stacks name the real writer). Enabled by default while the
+# hunt is active; disable per-build with
+#   A51_GWP_ASAN_SYSTEM_SERVER=false mka ...
+# or by flipping the default below. sample_rate=1000 is daily-driver-safe;
+# lower it (toward 1) for more coverage at higher cost. Remove when resolved.
+A51_GWP_ASAN_SYSTEM_SERVER ?= true
+ifeq ($(A51_GWP_ASAN_SYSTEM_SERVER),true)
+PRODUCT_SYSTEM_PROPERTIES += \
+    libc.debug.gwp_asan.process_sampling.system_server=1 \
+    libc.debug.gwp_asan.sample_rate.system_server=1000 \
+    libc.debug.gwp_asan.max_allocs.system_server=8000
+endif
