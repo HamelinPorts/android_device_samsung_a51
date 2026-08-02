@@ -127,3 +127,22 @@ PRODUCT_SYSTEM_PROPERTIES += \
     libc.debug.gwp_asan.sample_rate.system_server=1000 \
     libc.debug.gwp_asan.max_allocs.system_server=8000
 endif
+
+# GWP-ASan targeted at surfaceflinger (task #106 writer-catch, L1b). Rides the
+# same system flash as the I2 SF debug patch to lottery-catch a <=4KB heap
+# victim (occ-1 class) with alloc+free stacks. These MUST land in the SYSTEM
+# build.prop: the gwp_asan_prop SELinux context is system-writable only, so a
+# vendor placement is silently dropped by vendor_init (project_a51_ota_sideload_
+# blocked.md). Keys verified against bionic gwp_asan_wrappers.cpp: the targeted
+# 'persist.libc.debug.gwp_asan.<opt>.<basename>' form is precedence slot [1] and
+# the program basename is 'surfaceflinger'. process_sampling=1 => SF always
+# armed (powerof2 ok); sample_rate=250 => 1/250 allocations guarded; max_allocs=
+# 1024 guarded-pool slots. Disable per-build with A51_GWP_ASAN_SURFACEFLINGER=
+# false. Remove when #106 is resolved.
+A51_GWP_ASAN_SURFACEFLINGER ?= true
+ifeq ($(A51_GWP_ASAN_SURFACEFLINGER),true)
+PRODUCT_SYSTEM_PROPERTIES += \
+    persist.libc.debug.gwp_asan.process_sampling.surfaceflinger=1 \
+    persist.libc.debug.gwp_asan.sample_rate.surfaceflinger=250 \
+    persist.libc.debug.gwp_asan.max_allocs.surfaceflinger=1024
+endif
