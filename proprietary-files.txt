@@ -39,6 +39,25 @@ vendor/lib64/libgf_in_system_lib.so
 vendor/lib64/libqfp_sensortest.so
 vendor/lib64/libsynaFpSensorTestNwd.so
 
+## Face
+# Pinned to A515FXXU8HWI1: this is the only A515F dump we hold, so these are one
+# release behind the rest of the blobs. They talk to the HWK1 SEC_FR TA listed
+# above, which holds by measurement: the HWI1 and HWK1 SEC_FR (8327525 B) differ
+# in exactly 274 bytes -- the 20-byte NT_GNU_BUILD_ID descriptor at [0x1F4,0x207]
+# and a 256-byte RSA-2048 signature at [0x7F0D42,0x7F0E41] right behind the
+# samsung_drv:samsung_drv identity string. The DER certificate that follows the
+# signature is identical (CN=root, notBefore 180802) -- same signing key -- and
+# so is the whole TA payload: code, data, dispatch tables and the embedded
+# matcher model. No command ABI differs, so none can skew. BIOSUB differs in
+# 275 bytes of the same two kinds.
+vendor/bin/hw/vendor.samsung.hardware.biometrics.face-service|e9665582d9ca79e0deae57042a2ee92e8775609b
+vendor/etc/init/face-default-sec.rc|82cf75b5c985c093b6d2cce576c8498cc31732fe
+vendor/etc/vintf/manifest/face-default-sec.xml|df9a670be0245376a0e7765e725d75d7c2322a04
+vendor/lib64/libFaceService.so|c0b0aca739c36f9597ec3079265eb8e4f7fad3af|f30a175ef8127236ee72a7e072a5822b4c51fbbd
+vendor/lib64/libsecfr_engine.so|638e486fed8366936e1366bb64a39648d5e4f7d4
+vendor/lib64/libsecfr_model.so|1197f999fc5402596fa91f2feeb5ca6505b721d4
+vendor/lib64/vendor.samsung.hardware.biometrics.face-V2-ndk.so|ad8d90d5fff28cd437123443704368353d525476
+
 ## V4L2 (FIMC-IS2) Firmware
 vendor/firmware/fimc_is_lib.bin
 vendor/firmware/fimc_is_rta.bin

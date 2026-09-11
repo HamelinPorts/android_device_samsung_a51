@@ -38,6 +38,11 @@ blob_fixups: blob_fixups_user_type = {
         'vendor/lib64/libsensorlistener.so',
     ): blob_fixup()
         .add_needed('libshim_sensorndkbridge.so'),
+    # The V3 entry resolves no symbol in this blob, but libcamera2ndk_vendor
+    # pulls android.hardware.graphics.common at V7 and Soong rejects two
+    # versions of one aidl_interface in a single dependency graph.
+    'vendor/lib64/libFaceService.so': blob_fixup()
+        .remove_needed('android.hardware.graphics.common-V3-ndk.so'),
 } # fmt: skip
 
 module = ExtractUtilsModule(
