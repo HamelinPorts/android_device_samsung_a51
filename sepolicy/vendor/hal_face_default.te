@@ -1,0 +1,38 @@
+# Rules for /vendor/bin/hw/vendor.samsung.hardware.biometrics.face-service.
+#
+# The binary runs in AOSP's hal_face_default (see file_contexts), which already
+# supplies init_daemon_domain(), the hal_face attribute and its neverallows, and
+# add_service on hal_face_service. Only the device-specific accesses are here.
+# This mirrors how the fingerprint HAL is wired on this device.
+
+# libsecfr_engine.so loads the matcher TA through libteecl.so.
+teegris_use(hal_face_default)
+
+# libsecfr_engine.so hard-references /dev/s5p-smem to set up the secure buffer
+# it hands the matcher. Without this the ioctl surface fails as an avc denial
+# that reads like a secmem driver fault rather than a policy gap.
+allow hal_face_default secmem_device:chr_file rw_file_perms;
+
+# libcamera2ndk_vendor.so reaches the camera through cameraserver's
+# vendor-facing entry point, android.frameworks.cameraservice.service
+# .ICameraService/default. The reverse call is the capture-result and
+# service-listener callback path.
+allow hal_face_default fwk_camera_service:service_manager find;
+binder_call(hal_face_default, cameraserver)
+binder_call(cameraserver, hal_face_default)
+
+# AImageReader hands its producer end to cameraserver as an opaque token
+# (android.hidl.token@1.0-utils.so), and allocates the capture buffers through
+# gralloc.
+allow hal_face_default hidl_token_hwservice:hwservice_manager find;
+hal_client_domain(hal_face_default, hal_graphics_allocator)
+
+# libgui_vendor.so / libbinder.so bind to the vendor binder domain.
+vndbinder_use(hal_face_default)
+
+# libion_exynos's DmabufExporter ctor probes /dev/dma_heap/system to detect the
+# dma-heap ABI. gralloc3 is dlopened in-process as the legacy "Arm Module v1.0"
+# mapper, so the face HAL needs the same read AOSP already grants hal_camera /
+# hal_graphics_allocator. Read-only: libion opens O_RDONLY and allocates with
+# DMA_HEAP_IOCTL_ALLOC, covered by r_file_perms.
+allow hal_face_default dmabuf_system_heap_device:chr_file r_file_perms;

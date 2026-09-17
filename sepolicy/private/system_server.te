@@ -1,0 +1,8 @@
+# The face HAL owns the enrollment preview: it opens the camera itself and
+# consumes the preview surface the framework hands it. That surface crosses to
+# the HAL as an opaque HIDL token (android.hidl.token@1.0::ITokenManager), so
+# the framework side has to be able to mint one. Without this, token creation
+# fails silently and the HAL receives an empty handle.
+#
+# The HAL side of the same route is granted in sepolicy/vendor/hal_face_default.te.
+allow system_server hidl_token_hwservice:hwservice_manager find;

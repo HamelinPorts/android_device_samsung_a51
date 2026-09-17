@@ -47,6 +47,18 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/configs/sensors/hals.conf:$(TARGET_COPY_OUT_VENDOR)/etc/sensors/hals.conf
 
+# Face unlock. The feature flag gates SystemServer's FaceService startup; the
+# HAL itself is a vendor blob declared by its own VINTF fragment.
+#
+# No config_biometric_sensors overlay: AuthService feeds that array to
+# addHidlConfigs(), which mints a second, HIDL "defaultHIDL" provider next to
+# the real AIDL one and flips resetLockoutRequiresChallenge, and
+# FaceService.filterAvailableHalInstances() then picks between the two by
+# HashMap iteration order. The AIDL sensor reports its own strength from
+# getSensorProps() instead, and this HAL reports SensorStrength.WEAK.
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.biometrics.face.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.biometrics.face.xml
+
 # Interposes AHandler for libFaceService.so, which was built against a shorter
 # AHandler and keeps its own members where that class now holds mLock. Both the
 # face service binary and the library name this library in place of
