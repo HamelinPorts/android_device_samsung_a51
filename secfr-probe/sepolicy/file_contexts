@@ -1,0 +1,4 @@
+# Labels the probe so that running it from a shell enters its own domain.
+# Inert until this directory is added to BOARD_VENDOR_SEPOLICY_DIRS; see
+# a51_secfr_probe.te.
+/(vendor|system/vendor)/bin/a51-secfr-probe     u:object_r:a51_secfr_probe_exec:s0

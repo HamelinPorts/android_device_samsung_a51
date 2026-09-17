@@ -1,0 +1,51 @@
+//
+// SPDX-FileCopyrightText: 2026 The LineageOS Project
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_binary {
+    name: "a51-secfr-probe",
+
+    srcs: ["SecfrProbe.cpp"],
+
+    // The point of this binary. libsecfr_engine carries the trusted-application
+    // client and libsecfr_model the capture-model description; libteecl is the
+    // GlobalPlatform client API underneath them. liblog and libutils are the
+    // probe's own reporting and reference counting, and both already sit in the
+    // vendor libraries' own dependency closure.
+    //
+    // Nothing from the camera, surface or media stacks appears here, and
+    // verify-seam.py fails if any of it turns up transitively. That absence is
+    // the result this binary exists to establish, so it is checked rather than
+    // assumed.
+    shared_libs: [
+        "libsecfr_engine",
+        "libsecfr_model",
+        "libteecl",
+        "liblog",
+        "libutils",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wextra",
+    ],
+
+    sanitize: {
+        // The engine object is constructed by a vendor prebuilt, so its vtable
+        // lives outside any instrumented module and a checked dispatch from
+        // here would abort before reaching the trusted application.
+        cfi: false,
+    },
+
+    // The vendor libraries are 64-bit only.
+    compile_multilib: "64",
+
+    // Diagnostic. Deliberately kept out of the image: deploying it also needs a
+    // file_contexts entry and the SELinux domain under sepolicy/, which are not
+    // wired into the build either. See sepolicy/a51_secfr_probe.te.
+    installable: false,
+
+    vendor: true,
+}
