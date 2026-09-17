@@ -47,6 +47,13 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/configs/sensors/hals.conf:$(TARGET_COPY_OUT_VENDOR)/etc/sensors/hals.conf
 
+# Interposes AHandler for libFaceService.so, which was built against a shorter
+# AHandler and keeps its own members where that class now holds mLock. Both the
+# face service binary and the library name this library in place of
+# libstagefright_foundation.so; see extract-files.py for why both are needed.
+PRODUCT_PACKAGES += \
+    libsecfr_ahandler_compat
+
 # Audio configs
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/configs/audio/mixer_gains.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_gains.xml \

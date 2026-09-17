@@ -1,0 +1,40 @@
+//
+// SPDX-FileCopyrightText: 2026 The LineageOS Project
+// SPDX-License-Identifier: Apache-2.0
+//
+
+// Measures the H2BGraphicBufferProducer vtable geometry and sizeof(Surface)
+// out of the libgui_vendor.so this build produced. The unstripped output is
+// the input because sizeof(Surface) is only recorded in the debug info, which
+// the installed copy does not carry.
+cc_genrule {
+    name: "face_blob_abi_guard_header",
+    vendor: true,
+    compile_multilib: "64",
+
+    tool_files: ["derive_face_blob_abi.py"],
+    tools: ["llvm-dwarfdump"],
+    srcs: [":libgui_vendor{unstripped}"],
+    out: ["face_blob_abi_guard.h"],
+    cmd: "$(location derive_face_blob_abi.py) " +
+        "--dwarfdump $(location llvm-dwarfdump) " +
+        "--out $(out) $(in)",
+}
+
+// Contributes no symbols; it exists so that the measurements above are
+// compiled against the values the patched face prebuilt needs them to be.
+// libsecfr_ahandler_compat pulls it in because that is the one module on the
+// face path a normal build always builds.
+cc_library_static {
+    name: "libface_blob_abi_guard",
+    vendor: true,
+    compile_multilib: "64",
+
+    srcs: ["FaceBlobAbiGuard.cpp"],
+    generated_headers: ["face_blob_abi_guard_header"],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

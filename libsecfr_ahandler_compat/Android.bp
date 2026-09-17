@@ -1,0 +1,55 @@
+//
+// SPDX-FileCopyrightText: 2026 The LineageOS Project
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "libsecfr_ahandler_compat",
+
+    srcs: [
+        "AHandlerCompat.cpp",
+        "AHandlerLayoutGuard.cpp",
+    ],
+
+    header_libs: [
+        "libstagefright_foundation_headers",
+    ],
+
+    shared_libs: [
+        "libstagefright_foundation",
+        "libutils",
+    ],
+
+    // Symbol-free; it carries the build-time guard on the libgui ABI that the
+    // same face prebuilt depends on. It rides this module because a normal
+    // build always builds this one.
+    static_libs: [
+        "libface_blob_abi_guard",
+    ],
+
+    // Exports exactly the three AHandler entry points; see the script.
+    version_script: "libsecfr_ahandler_compat.map.txt",
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        // AHandler is not standard-layout (RefBase is polymorphic), so offsetof
+        // on it is only conditionally supported. It has no virtual bases, the
+        // compiler computes the offsets correctly, and pinning them is the whole
+        // point of the layout guard.
+        "-Wno-invalid-offsetof",
+    ],
+
+    sanitize: {
+        // The handler object is constructed by a vendor prebuilt, so its vtable
+        // lives outside any CFI-instrumented module and a checked virtual
+        // dispatch from here would abort.
+        cfi: false,
+    },
+
+    // The only consumer is a 64-bit prebuilt, and the exported mangled names are
+    // LP64-specific (int64_t mangles as 'l' here and 'x' on ILP32).
+    compile_multilib: "64",
+
+    vendor: true,
+}

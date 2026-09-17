@@ -1,0 +1,23 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The LineageOS Project
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Only the three AHandler entry points may be exported: everything else the
+ * face closure resolves out of libstagefright_foundation has to keep reaching
+ * the real implementation, which sits one level deeper in the same lookup
+ * list.
+ *
+ * The version block is anonymous on purpose. A named block would emit symbol
+ * versions, and the prebuilt looks these up unversioned.
+ */
+{
+  global:
+    /* android::AHandler::deliverMessage(android::sp<android::AMessage> const&) */
+    _ZN7android8AHandler14deliverMessageERKNS_2spINS_8AMessageEEE;
+    /* android::AHandler::setDeliveryStatus(bool, unsigned int, long) */
+    _ZN7android8AHandler17setDeliveryStatusEbjl;
+    /* android::AHandler::getDeliveryStatus(bool&, unsigned int&, long&) */
+    _ZN7android8AHandler17getDeliveryStatusERbRjRl;
+  local:
+    *;
+};

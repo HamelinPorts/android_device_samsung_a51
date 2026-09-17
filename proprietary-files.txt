@@ -50,10 +50,17 @@ vendor/lib64/libsynaFpSensorTestNwd.so
 # so is the whole TA payload: code, data, dispatch tables and the embedded
 # matcher model. No command ABI differs, so none can skew. BIOSUB differs in
 # 275 bytes of the same two kinds.
-vendor/bin/hw/vendor.samsung.hardware.biometrics.face-service|e9665582d9ca79e0deae57042a2ee92e8775609b
+# DISABLE_CHECKELF on the two blobs that extract-files.py points at
+# libsecfr_ahandler_compat.so: that library exports three AHandler symbols and
+# reaches the rest of libstagefright_foundation.so through its own DT_NEEDED,
+# and check_elf_file.py resolves against direct shared_libs only, so it cannot
+# follow that hop. The equivalent transitive check, which also asserts that the
+# three symbols really bind to the shim, is
+# claude/tools/check-face-symbol-closure.py.
+vendor/bin/hw/vendor.samsung.hardware.biometrics.face-service;DISABLE_CHECKELF|e9665582d9ca79e0deae57042a2ee92e8775609b|a43a5806415f15f9d057a9779b5ccc284617699c
 vendor/etc/init/face-default-sec.rc|82cf75b5c985c093b6d2cce576c8498cc31732fe
 vendor/etc/vintf/manifest/face-default-sec.xml|df9a670be0245376a0e7765e725d75d7c2322a04
-vendor/lib64/libFaceService.so|c0b0aca739c36f9597ec3079265eb8e4f7fad3af|f30a175ef8127236ee72a7e072a5822b4c51fbbd
+vendor/lib64/libFaceService.so;DISABLE_CHECKELF|c0b0aca739c36f9597ec3079265eb8e4f7fad3af|16c0a3f03cfa8953e6ef1a0afdfe132c15367265
 vendor/lib64/libsecfr_engine.so|638e486fed8366936e1366bb64a39648d5e4f7d4
 vendor/lib64/libsecfr_model.so|1197f999fc5402596fa91f2feeb5ca6505b721d4
 vendor/lib64/vendor.samsung.hardware.biometrics.face-V2-ndk.so|ad8d90d5fff28cd437123443704368353d525476
