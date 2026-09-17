@@ -1,0 +1,18 @@
+# The camera provider allocates the PROTECTED capture buffer itself -- its copy
+# of libion_exynos opens /dev/dma_heap/secure_camera-secure in-process instead of
+# routing the allocation through gralloc, so the Phase 5 grant on
+# hal_graphics_allocator_default does not cover it. DAC already permits the open
+# (the node is 0444 system:system); only MAC stood in the way:
+#
+#   avc: denied { read } comm="setBuffersThrea" name="secure_camera-secure"
+#   scontext=u:r:hal_camera_default:s0
+#   tcontext=u:object_r:dmabuf_secure_camera_heap_device:s0 tclass=chr_file
+#
+# Same read-only shape as the hal_face_default heap grant: libion opens the heap
+# O_RDONLY and allocates with DMA_HEAP_IOCTL_ALLOC, and r_file_perms already
+# carries ioctl and map alongside open/read.
+allow hal_camera_default dmabuf_secure_camera_heap_device:chr_file r_file_perms;
+
+# Same allocator, second pool: the VRA and taaisp buffers come from camera_heap
+# with ION_FLAG_PROTECTED, which libion addresses as /dev/dma_heap/camera-secure.
+allow hal_camera_default dmabuf_camera_heap_device:chr_file r_file_perms;

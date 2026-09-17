@@ -1,0 +1,7 @@
+# gralloc is the allocator for PROTECTED buffers: libion_exynos composes
+# /dev/dma_heap/secure_camera-secure from the heap name plus a "-secure"
+# suffix. Read-only matches both the node's 0444 mode and the
+# dmabuf_system_heap_device grant AOSP gives this domain -- libion opens the
+# heap O_RDONLY and allocates with DMA_HEAP_IOCTL_ALLOC, which r_file_perms
+# covers.
+allow hal_graphics_allocator_default dmabuf_secure_camera_heap_device:chr_file r_file_perms;

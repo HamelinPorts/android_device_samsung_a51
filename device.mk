@@ -34,6 +34,11 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 PRODUCT_PACKAGES += \
     fingerprint_common.rc
 
+# Device-node permissions that must not leak to the other universal9611
+# devices. /system/etc/ueventd.rc imports this after /vendor/etc/ueventd.rc.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/configs/init/ueventd.rc:$(TARGET_COPY_OUT_ODM)/etc/ueventd.rc
+
 # Fingerprint
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.fingerprint-service.a51 \

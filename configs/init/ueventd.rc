@@ -1,0 +1,14 @@
+# Installed as /odm/etc/ueventd.rc, which /system/etc/ueventd.rc imports.
+# /vendor/etc/ueventd.rc is shared by the five universal9611 devices, so
+# a51-only device-node permissions belong here instead.
+
+# Secure-camera dma-heap node. gralloc runs as system:graphics and opens the
+# heap read-only to allocate from it, so 0444 system system matches
+# /dev/dma_heap/system -- the heap node gralloc already uses successfully.
+/dev/dma_heap/secure_camera-secure    0444   system     system
+
+# Protected camera-reserved dma-heap node. The camera provider allocates from it
+# in-process via libion rather than through gralloc, so it needs its own node.
+# 0444 makes the open succeed for any uid; the heap is reachable only by the
+# domains sepolicy grants, which is where the real gate sits.
+/dev/dma_heap/camera-secure           0444   system     system

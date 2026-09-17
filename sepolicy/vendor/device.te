@@ -1,0 +1,9 @@
+# /dev/dma_heap/secure_camera-secure carries its own type rather than the
+# generic dmabuf_heap_device, which also labels /dev/dma_heap/system: granting
+# that type would hand every recipient access to every heap on the device.
+type dmabuf_secure_camera_heap_device, dmabuf_heap_device_type, dev_type;
+
+# /dev/dma_heap/camera-secure is a second protected pool (camera_heap, protection
+# id 10) and carries its own type for the same reason: a domain that needs the
+# camera carveout must not thereby reach the secure-camera carveout.
+type dmabuf_camera_heap_device, dmabuf_heap_device_type, dev_type;
