@@ -36,3 +36,35 @@ vndbinder_use(hal_face_default)
 # hal_graphics_allocator. Read-only: libion opens O_RDONLY and allocates with
 # DMA_HEAP_IOCTL_ALLOC, covered by r_file_perms.
 allow hal_face_default dmabuf_system_heap_device:chr_file r_file_perms;
+
+# The enrolment preview buffers arrive from the Settings UI, which runs as
+# system_app, and each one carries an anon_inode:sync_file fence descriptor.
+# Denying this does not read as a policy failure: binder's fd-array translation
+# fails first, so the frame is dropped and the HAL reports a generic enrolment
+# error. AOSP grants the structurally identical access on the camera path
+# (system/sepolicy/private/hal_camera.te: hal_camera -> { appdomain
+# -isolated_app }:fd use); naming system_app alone keeps this strictly narrower.
+allow hal_face_default system_app:fd use;
+
+# libcamera2ndk_vendor.so reads the camera configuration properties while it
+# opens the device. get_prop() is { getattr open read map }, which is exactly
+# the access observed -- no need to spell the permissions out.
+get_prop(hal_face_default, camera_config_prop)
+
+# Writing the template store is the last step of an enrolment, so it is only
+# reachable once capture has already succeeded. The engine stages the template
+# through a scratch directory next to the store and removes it again:
+#
+#   avc: denied { create } / { setattr } / { rmdir } name="bk"
+#   scontext=u:r:hal_face_default:s0
+#   tcontext=u:object_r:face_vendor_data_file:s0 tclass=dir
+#
+# AOSP grants hal_face rw_dir_perms on this type (system/sepolicy/private/
+# hal_face.te), which carries write/add_name/remove_name but none of the three
+# above. Only the measured gap is granted here -- create_dir_perms would also
+# add reparent and rename, which were never observed.
+#
+# No file-class rule is needed and none is added: the same AOSP file already
+# grants face_vendor_data_file:file create_file_perms, which is why the
+# enrolment produced dir denials only.
+allow hal_face_default face_vendor_data_file:dir { create setattr rmdir };
