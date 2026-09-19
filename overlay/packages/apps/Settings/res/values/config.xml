@@ -17,4 +17,11 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- The radius of the enrollment progress bar, in dp -->
     <integer name="config_udfpsEnrollProgressBar" translatable="false">70</integer>
+
+    <!-- Take the Lottie path on the face education screen. The default path plays
+         res/raw/face_education.mp4, which upstream ships as a 0-byte placeholder;
+         playing it fails with a MediaPlayer error that looks like a camera fault.
+         The Lottie asset is an empty placeholder too, so the illustration stays
+         blank either way - this only removes the misleading failure. -->
+    <bool name="config_face_education_use_lottie">true</bool>
 </resources>

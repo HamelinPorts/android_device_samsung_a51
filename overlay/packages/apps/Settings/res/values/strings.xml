@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Face enrolment body copy. Upstream ships these as empty placeholders for an
+     OEM/GMS overlay, so the consent and education screens render with no text.
+     Values that carry no product qualifier upstream live here; the
+     product-qualified ones are in the res-product overlay.
+-->
+<resources>
+    <!-- Education screen: how to hold the phone while enrolling. -->
+    <string name="security_settings_face_enroll_education_message">Hold your phone at eye level, about an arm\'s length away, and look directly at the screen.</string>
+
+    <!-- Introduction screen: what to take off before enrolling. -->
+    <string name="security_settings_face_enroll_introduction_info_glasses">You can wear glasses, but take off sunglasses or anything covering your face.</string>
+
+    <!-- Introduction screen: section headings. -->
+    <string name="security_settings_face_enroll_introduction_how_title">How it works</string>
+    <string name="security_settings_face_enroll_introduction_control_title">You\'re in control</string>
+</resources>
