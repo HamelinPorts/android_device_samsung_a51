@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     German face enrolment body copy. Upstream ships these empty in every locale,
+     and a translated bucket outranks the default one at runtime, so the default
+     overlay alone would still leave a German device blank.
+
+     Register is "du", matching res/values-de (545 "dein*" / 403 "du" against 9
+     "Sie"). The feature is named "die Entsperrung per Gesichtserkennung", the
+     in-sentence form the surrounding German strings already use.
+-->
+<resources>
+    <!-- Education screen: how to hold the phone while enrolling. -->
+    <string name="security_settings_face_enroll_education_message">Halte dein Gerät auf Augenhöhe, etwa eine Armlänge entfernt, und schau direkt auf den Bildschirm.</string>
+
+    <!-- Introduction screen: what to take off before enrolling. -->
+    <string name="security_settings_face_enroll_introduction_info_glasses">Du kannst eine Brille tragen, nimm aber Sonnenbrillen oder alles ab, was dein Gesicht verdeckt.</string>
+
+    <!-- Introduction screen: section headings. info_title heads the bullet list
+         and is set straight from the layout, so an empty value renders as a
+         blank heading rather than collapsing the section. -->
+    <string name="security_settings_face_enroll_introduction_info_title">Bitte beachten</string>
+    <string name="security_settings_face_enroll_introduction_how_title">So funktioniert es</string>
+    <string name="security_settings_face_enroll_introduction_control_title">Du hast die Kontrolle</string>
+</resources>

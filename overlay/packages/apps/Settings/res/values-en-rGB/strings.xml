@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     UK English face enrolment body copy. Upstream ships these empty in every
+     locale, and a translated bucket outranks the default one at runtime, so a
+     UK-English device would stay blank even though the approved copy is already
+     English. No adaptation is needed: the copy uses British spelling
+     ("recognise"), so these are the default-bucket strings verbatim.
+-->
+<resources>
+    <!-- Education screen: how to hold the phone while enrolling. -->
+    <string name="security_settings_face_enroll_education_message">Hold your phone at eye level, about an arm\'s length away, and look directly at the screen.</string>
+
+    <!-- Introduction screen: what to take off before enrolling. -->
+    <string name="security_settings_face_enroll_introduction_info_glasses">You can wear glasses, but take off sunglasses or anything covering your face.</string>
+
+    <!-- Introduction screen: section headings. info_title heads the bullet list
+         and is set straight from the layout, so an empty value renders as a
+         blank heading rather than collapsing the section. -->
+    <string name="security_settings_face_enroll_introduction_info_title">Keep in mind</string>
+    <string name="security_settings_face_enroll_introduction_how_title">How it works</string>
+    <string name="security_settings_face_enroll_introduction_control_title">You\'re in control</string>
+</resources>

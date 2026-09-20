@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     French face enrolment body copy. Upstream ships these empty in every locale,
+     and a translated bucket outranks the default one at runtime, so the default
+     overlay alone would still leave a French device blank.
+
+     Register is "vous", matching res/values-fr (1248 vous/votre/vos against 4
+     tu/ton/ta/tes). The feature is named "le deverrouillage par reconnaissance
+     faciale", the in-sentence form the surrounding French strings already use.
+     Apostrophes are escaped, as in the base translation.
+-->
+<resources>
+    <!-- Education screen: how to hold the phone while enrolling. -->
+    <string name="security_settings_face_enroll_education_message">Tenez votre appareil à hauteur des yeux, à environ une longueur de bras, et regardez directement l\'écran.</string>
+
+    <!-- Introduction screen: what to take off before enrolling. -->
+    <string name="security_settings_face_enroll_introduction_info_glasses">Vous pouvez porter des lunettes, mais retirez les lunettes de soleil ou tout ce qui couvre votre visage.</string>
+
+    <!-- Introduction screen: section headings. info_title heads the bullet list
+         and is set straight from the layout, so an empty value renders as a
+         blank heading rather than collapsing the section. -->
+    <string name="security_settings_face_enroll_introduction_info_title">À garder à l\'esprit</string>
+    <string name="security_settings_face_enroll_introduction_how_title">Comment ça marche</string>
+    <string name="security_settings_face_enroll_introduction_control_title">Vous gardez le contrôle</string>
+</resources>
