@@ -12,7 +12,10 @@
     <!-- Introduction screen: what to take off before enrolling. -->
     <string name="security_settings_face_enroll_introduction_info_glasses">You can wear glasses, but take off sunglasses or anything covering your face.</string>
 
-    <!-- Introduction screen: section headings. -->
+    <!-- Introduction screen: section headings. info_title heads the bullet list
+         and is set straight from the layout, so an empty value renders as a
+         blank heading rather than collapsing the section. -->
+    <string name="security_settings_face_enroll_introduction_info_title">Keep in mind</string>
     <string name="security_settings_face_enroll_introduction_how_title">How it works</string>
     <string name="security_settings_face_enroll_introduction_control_title">You\'re in control</string>
 </resources>
