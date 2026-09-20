@@ -5,8 +5,9 @@
      overlay alone would still leave a German device blank.
 
      Register is "du", matching res/values-de (545 "dein*" / 403 "du" against 9
-     "Sie"). The feature is named "die Entsperrung per Gesichtserkennung", the
-     in-sentence form the surrounding German strings already use.
+     "Sie"). The feature is called "Gesichtserkennung": the surrounding strings
+     use the longer "Entsperrung per Gesichtserkennung", but a native speaker
+     shortened it here because it opens a sentence three times over.
 -->
 <resources>
     <!-- Education screen: how to hold the phone while enrolling. -->

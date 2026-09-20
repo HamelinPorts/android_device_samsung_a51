@@ -4,6 +4,9 @@
      res-product split was checked per string for values-de and matches the
      default bucket: these five are product-qualified, the other five are not.
 
+     The feature is called "Gesichtserkennung" here. Sentence-initial it takes no
+     article; after "oder" in control_message it keeps the accusative "die".
+
      Soong globs overlays per resource dir, so these must sit under a res-product
      overlay dir to reach the base values at all. Only the "default" product is
      built: TARGET_AAPT_CHARACTERISTICS defaults to "default", so Soong passes no
@@ -15,9 +18,9 @@
     <string name="security_settings_face_enroll_introduction_info_gaze" product="default">Deine Augen müssen geöffnet sein.</string>
 
     <!-- Introduction screen: security caveat shown next to the info icon. -->
-    <string name="security_settings_face_enroll_introduction_info_less_secure" product="default">Die Entsperrung per Gesichtserkennung ist weniger sicher als eine starke PIN oder ein starkes Passwort. Jemand, der dir ähnlich sieht, könnte dein Gerät damit entsperren.</string>
+    <string name="security_settings_face_enroll_introduction_info_less_secure" product="default">Gesichtserkennung ist weniger sicher als eine starke PIN oder ein starkes Passwort. Jemand, der dir ähnlich sieht, könnte dein Gerät damit entsperren.</string>
 
     <!-- Introduction screen: section bodies. -->
-    <string name="security_settings_face_enroll_introduction_how_message" product="default">Die Entsperrung per Gesichtserkennung erstellt ein Modell deines Gesichts, um dich zu erkennen. Es wird auf deinem Gerät gespeichert und verlässt es nie.</string>
-    <string name="security_settings_face_enroll_introduction_control_message" product="default">Du kannst dein Gesichtsmodell jederzeit in den Einstellungen löschen oder die Entsperrung per Gesichtserkennung deaktivieren und stattdessen deine PIN verwenden.</string>
+    <string name="security_settings_face_enroll_introduction_how_message" product="default">Gesichtserkennung erstellt ein Modell deines Gesichts, um dich zu erkennen. Es wird auf deinem Gerät gespeichert und verlässt es nie.</string>
+    <string name="security_settings_face_enroll_introduction_control_message" product="default">Du kannst dein Gesichtsmodell jederzeit in den Einstellungen löschen oder die Gesichtserkennung deaktivieren und stattdessen deine PIN verwenden.</string>
 </resources>

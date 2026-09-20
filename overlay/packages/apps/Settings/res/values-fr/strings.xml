@@ -20,6 +20,6 @@
          and is set straight from the layout, so an empty value renders as a
          blank heading rather than collapsing the section. -->
     <string name="security_settings_face_enroll_introduction_info_title">À garder à l\'esprit</string>
-    <string name="security_settings_face_enroll_introduction_how_title">Comment ça marche</string>
+    <string name="security_settings_face_enroll_introduction_how_title">Comment ça fonctionne</string>
     <string name="security_settings_face_enroll_introduction_control_title">Vous gardez le contrôle</string>
 </resources>
