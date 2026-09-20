@@ -17,4 +17,12 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- The radius of the enrollment progress bar, in dp -->
     <integer name="config_udfpsEnrollProgressBar" translatable="false">70</integer>
+
+    <!-- Face education screen: draw the Lottie illustration instead of the video one.
+         FaceEnrollEducation keeps the IllustrationVideoView INVISIBLE when this is set, so
+         the TextureView is never drawn, no SurfaceTexture is produced and no MediaPlayer is
+         constructed. That removes a synchronous MediaPlayer.setDataSource() from the Settings
+         main thread during the screen's first draw, which blocks for seconds on this SoC and
+         is what makes FaceEnrollEducation ANR. -->
+    <bool name="config_face_education_use_lottie">true</bool>
 </resources>
