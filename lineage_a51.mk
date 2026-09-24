@@ -17,6 +17,18 @@
 # FOD
 TARGET_HAS_FOD := true
 
+# ART: eng ships no AOT code, which leaves SystemUI in a startup-ANR loop after
+# boot.  Preopt SystemUI and the framework boot image its odex is compiled
+# against; every other module stays unpreopted (BoardConfig.mk), and on-device
+# dexopt stays off as on a stock eng build.  Set here because only this file's
+# body runs before runtime_libart.mk, which merely defaults the override.
+ifeq ($(TARGET_BUILD_VARIANT),eng)
+OVERRIDE_DISABLE_DEXOPT_ALL := false
+PRODUCT_SYSTEM_PROPERTIES += \
+    dalvik.vm.disable-art-service-dexopt=true \
+    dalvik.vm.disable-odrefresh=true
+endif
+
 # Inherit device configuration
 $(call inherit-product, device/samsung/a51/device.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)

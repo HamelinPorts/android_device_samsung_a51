@@ -176,3 +176,21 @@ TARGET_LINUX_KERNEL_VERSION := 6.1
 TARGET_BOARD_KERNEL_HEADERS := hardware/samsung_slsi-linaro/exynos/kernel-$(TARGET_LINUX_KERNEL_VERSION)-headers/kernel-headers
 $(call soong_config_set_bool,openmax,MAINLINE_FEATURE_IN_SINCE_4_19,true)
 endif
+
+# ART: preopt SystemUI only (lineage_a51.mk).  There is no preopt allowlist, so every
+# other product package and system_server jar is denied by name; this needs the
+# final PRODUCT_PACKAGES, hence board config.  Apps installed only through another
+# module's required: are in no product list and are named explicitly; a new one
+# shows up as an odex in the OTA.  The dexpreopt check assumes system_server jars
+# are preopted whenever anything is, so it is off here.
+ifeq ($(TARGET_BUILD_VARIANT),eng)
+DEX_PREOPT_DEFAULT := false
+DEXPREOPT_DISABLED_MODULES += \
+    $(filter-out SystemUI,$(PRODUCT_PACKAGES) $(PRODUCT_PACKAGES_DEBUG) $(PRODUCT_PACKAGES_ENG)) \
+    $(foreach jar,$(PRODUCT_SYSTEM_SERVER_JARS) $(PRODUCT_APEX_SYSTEM_SERVER_JARS) \
+        $(PRODUCT_STANDALONE_SYSTEM_SERVER_JARS) $(PRODUCT_APEX_STANDALONE_SYSTEM_SERVER_JARS), \
+        $(lastword $(subst :, ,$(jar)))) \
+    ApertureLensLauncher \
+    LocalContactsBackup
+DISABLE_DEXPREOPT_CHECK := true
+endif
