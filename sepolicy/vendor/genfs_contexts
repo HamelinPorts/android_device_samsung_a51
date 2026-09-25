@@ -1,0 +1,4 @@
+# Touchscreen "enabled" attribute, written by the power HAL through
+# /sys/class/sec/tsp/input/enabled. The common policy labels input4-6, the
+# 4.14 probe order; the 6.12 kernel registers the touchscreen as input2.
+genfscon sysfs /devices/platform/13870000.i2c/i2c-4/4-0048/input/input2/enabled u:object_r:sysfs_touchscreen_writable:s0
