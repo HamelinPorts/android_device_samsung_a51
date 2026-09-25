@@ -16,14 +16,6 @@
 
 DEVICE_PATH := device/samsung/a51
 
-# Power HAL config: the common file gates the touch IC through the Samsung
-# 4.14 input attribute 'enabled', which the 6.12 kernel does not have; this
-# copy uses the mainline 'inhibited' attribute instead. It must come before
-# the common inherit: the first PRODUCT_COPY_FILES entry for a destination
-# wins.
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/configs/power/powerhint.json:$(TARGET_COPY_OUT_VENDOR)/etc/powerhint.json
-
 # Inherit common device configuration
 $(call inherit-product, device/samsung/universal9611-common/common.mk)
 # Inherit A51 blobs
@@ -40,8 +32,7 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # Init.rc
 PRODUCT_PACKAGES += \
-    fingerprint_common.rc \
-    init.touch_inhibit.rc
+    fingerprint_common.rc
 
 # Device-node permissions that must not leak to the other universal9611
 # devices. /system/etc/ueventd.rc imports this after /vendor/etc/ueventd.rc.

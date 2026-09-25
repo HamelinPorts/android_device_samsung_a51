@@ -1,6 +1,0 @@
-# The power HAL gates the touch IC through the mainline input 'inhibited'
-# attribute (powerhint.json). /sys/class/sec/tsp/input links to the touch
-# input device, so this path does not depend on the input number.
-on boot
-    chown system system /sys/class/sec/tsp/input/inhibited
-    chmod 0660 /sys/class/sec/tsp/input/inhibited

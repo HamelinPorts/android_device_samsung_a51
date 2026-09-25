@@ -1,4 +1,0 @@
-# Touch IC power gate written by the power HAL via /sys/class/sec/tsp/input.
-# Exact file only: the power HAL runs as uid root, so this label is its sole
-# gate. The input number is fixed by probe order on the 6.12 kernel.
-genfscon sysfs /devices/platform/13870000.i2c/i2c-4/4-0048/input/input2/inhibited u:object_r:sysfs_touchscreen_writable:s0
