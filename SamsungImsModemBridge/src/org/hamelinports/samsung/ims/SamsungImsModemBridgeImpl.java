@@ -2,6 +2,8 @@
 package org.hamelinports.samsung.ims;
 
 import android.os.Binder;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
@@ -13,6 +15,7 @@ import org.hamelinports.ims.modem.IImsModemBridge;
 import org.hamelinports.ims.modem.IImsModemBridgeCallback;
 
 import java.nio.charset.StandardCharsets;
+import java.util.NoSuchElementException;
 
 /**
  * IImsModemBridge implementation for Samsung A51-class hardware.
@@ -34,6 +37,11 @@ import java.nio.charset.StandardCharsets;
  * single Service instance. Per-slot binder bindings (to imsd vs
  * imsd2) live in {@link #mSlots}; every call carries an explicit
  * slotId.
+ *
+ * <p>rild keeps the channel callback only for the lifetime of its
+ * process. A death recipient on each channel re-acquires the service
+ * after a rild restart and installs the callback again; without it
+ * the new rild has no callback and drops modem-to-IMS indications.
  */
 final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
 
@@ -74,11 +82,23 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
     private static final int TOTAL_LEN = HEADER_LEN + BODY_LEN; // 273
     private static final int MAX_URI_UTF8 = 256;
 
+    /** Re-bind backoff after losing a channel: 0.5 s doubling to 8 s,
+     *  ~2 min in total, which covers a rild + modem restart. Past that
+     *  the next send re-binds lazily. */
+    private static final long REBIND_INITIAL_DELAY_MS = 500;
+    private static final long REBIND_MAX_DELAY_MS = 8_000;
+    private static final int REBIND_MAX_ATTEMPTS = 20;
+
     /** Per-slot state — separate binder + callback pair per imsd
      *  service so dual-SIM dispatch doesn't cross-contaminate. */
     private static final class SlotState {
         final int slotId;
         IBinder binder;
+        IBinder.DeathRecipient deathRecipient;
+        /** Set by {@code stop()}: a lost channel is not re-bound. */
+        boolean stopped;
+        /** Current re-bind attempt; 0 while no re-bind is pending. */
+        int rebindAttempt;
         final Binder callbackStub;
         SlotState(int slotId) {
             this.slotId = slotId;
@@ -127,10 +147,60 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
     private final Object mLock = new Object();
     private final SparseArray<SlotState> mSlots = new SparseArray<>();
 
+    /** Re-binds run off the main thread: this service shares the IMS
+     *  process, and a re-bind makes a synchronous call into rild. */
+    private final HandlerThread mRebindThread = new HandlerThread(TAG + "-rebind");
+    private final Handler mRebindHandler;
+
+    /** Reports the death of one specific channel binder. */
+    private final class ChannelDeathRecipient implements IBinder.DeathRecipient {
+        private final int mSlotId;
+        private final IBinder mChannel;
+
+        ChannelDeathRecipient(int slotId, IBinder channel) {
+            mSlotId = slotId;
+            mChannel = channel;
+        }
+
+        @Override
+        public void binderDied() {
+            synchronized (mLock) {
+                SlotState s = mSlots.get(mSlotId);
+                /* Ignore a death that arrives after the slot moved on
+                 * to a newer binder. */
+                if (s == null || s.binder != mChannel) return;
+                loseChannelLocked(s, "rild died");
+            }
+        }
+    }
+
+    SamsungImsModemBridgeImpl() {
+        mRebindThread.start();
+        mRebindHandler = new Handler(mRebindThread.getLooper());
+    }
+
+    /** Drops every channel and stops the re-bind thread. */
+    void shutdown() {
+        synchronized (mLock) {
+            for (int i = 0; i < mSlots.size(); i++) {
+                SlotState s = mSlots.valueAt(i);
+                s.stopped = true;
+                s.rebindAttempt = 0;
+                dropChannelLocked(s);
+            }
+            mRebindHandler.removeCallbacksAndMessages(null);
+        }
+        mRebindThread.quitSafely();
+    }
+
     @Override
     public void start(int slotId) {
         Log.i(TAG, "start slot=" + slotId);
-        bind(slotId);
+        synchronized (mLock) {
+            SlotState s = slotLocked(slotId);
+            s.stopped = false;
+            connectLocked(s, true);
+        }
     }
 
     @Override
@@ -138,60 +208,146 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
         Log.i(TAG, "stop slot=" + slotId);
         synchronized (mLock) {
             SlotState s = mSlots.get(slotId);
-            if (s != null) s.binder = null;
+            if (s == null) return;
+            s.stopped = true;
+            s.rebindAttempt = 0;
+            mRebindHandler.removeCallbacksAndMessages(s);
+            dropChannelLocked(s);
         }
     }
 
-    /** Look up the rild-hosted binder for the given slot. Uses
-     *  {@code checkService} (non-blocking) so a missing service on a
-     *  slot with no SIM doesn't wedge us forever. Returns the live
-     *  binder or null. */
+    /** Returns the live channel binder for the slot, binding it on
+     *  demand; null if rild does not serve it right now. */
     private IBinder bind(int slotId) {
         synchronized (mLock) {
+            return connectLocked(slotLocked(slotId), true);
+        }
+    }
+
+    private SlotState slotLocked(int slotId) {
+        SlotState s = mSlots.get(slotId);
+        if (s == null) {
+            s = new SlotState(slotId);
+            mSlots.put(slotId, s);
+        }
+        return s;
+    }
+
+    private static String serviceName(int slotId) {
+        return DESCRIPTOR + "/" + (slotId == 0 ? "imsd" : "imsd2");
+    }
+
+    /** Look up the rild-hosted binder for the slot, watch it for death
+     *  and install the callback. Uses {@code checkService}
+     *  (non-blocking) so a missing service on a slot with no SIM
+     *  doesn't wedge us forever. Returns the live binder or null. */
+    private IBinder connectLocked(SlotState s, boolean logMissing) {
+        if (s.binder != null) {
+            if (s.binder.isBinderAlive()) return s.binder;
+            /* Dead, but the death notice has not been delivered yet. */
+            loseChannelLocked(s, "rild died");
+        }
+
+        String name = serviceName(s.slotId);
+        IBinder b;
+        try {
+            b = ServiceManager.checkService(name);
+        } catch (Throwable t) {
+            Log.w(TAG, "checkService threw for " + name, t);
+            return null;
+        }
+        if (b == null) {
+            if (logMissing) Log.w(TAG, "service not yet declared: " + name);
+            return null;
+        }
+
+        IBinder.DeathRecipient recipient = new ChannelDeathRecipient(s.slotId, b);
+        try {
+            b.linkToDeath(recipient, 0);
+        } catch (RemoteException e) {
+            loseChannelLocked(s, name + " died while binding");
+            return null;
+        }
+        s.binder = b;
+        s.deathRecipient = recipient;
+        Log.i(TAG, "slot=" + s.slotId + " bound to " + name);
+
+        installCallbackLocked(s);
+
+        if (s.rebindAttempt != 0) {
+            Log.i(TAG, "slot=" + s.slotId + " re-bound " + name
+                    + " after channel loss (attempt " + s.rebindAttempt + ")");
+            s.rebindAttempt = 0;
+            mRebindHandler.removeCallbacksAndMessages(s);
+        }
+        return s.binder;
+    }
+
+    /** Install the per-slot callback so any modem-originated IIL
+     *  messages on this slot's channel surface as log lines. */
+    private static void installCallbackLocked(SlotState s) {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(DESCRIPTOR);
+            data.writeStrongBinder(s.callbackStub);
+            boolean ok = s.binder.transact(TXN_SET_CALLBACK, data, reply, 0);
+            if (ok) {
+                reply.readException();
+                Log.i(TAG, "slot=" + s.slotId + " setCallback OK");
+            } else {
+                Log.w(TAG, "slot=" + s.slotId + " setCallback transact false");
+            }
+        } catch (RemoteException | RuntimeException e) {
+            Log.w(TAG, "slot=" + s.slotId + " setCallback failed", e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /** Forget the slot's binder without scheduling anything. */
+    private static void dropChannelLocked(SlotState s) {
+        if (s.binder != null && s.deathRecipient != null) {
+            try {
+                s.binder.unlinkToDeath(s.deathRecipient, 0);
+            } catch (NoSuchElementException ignored) {
+                /* Already unlinked by the binder's death. */
+            }
+        }
+        s.binder = null;
+        s.deathRecipient = null;
+    }
+
+    /** Forget the slot's binder and, unless the slot is stopped or a
+     *  re-bind is already pending, start re-binding it. */
+    private void loseChannelLocked(SlotState s, String reason) {
+        dropChannelLocked(s);
+        if (s.stopped || s.rebindAttempt != 0) return;
+        Log.w(TAG, "slot=" + s.slotId + " channel lost (" + reason + "), re-binding");
+        scheduleRebindLocked(s);
+    }
+
+    private void scheduleRebindLocked(SlotState s) {
+        if (s.rebindAttempt >= REBIND_MAX_ATTEMPTS) {
+            Log.e(TAG, "slot=" + s.slotId + " re-bind gave up after "
+                    + s.rebindAttempt + " attempts; the next send retries");
+            s.rebindAttempt = 0;
+            return;
+        }
+        s.rebindAttempt++;
+        long delay = Math.min(REBIND_INITIAL_DELAY_MS << Math.min(s.rebindAttempt - 1, 16),
+                REBIND_MAX_DELAY_MS);
+        final int slotId = s.slotId;
+        mRebindHandler.removeCallbacksAndMessages(s);
+        mRebindHandler.postDelayed(() -> rebind(slotId), s, delay);
+    }
+
+    private void rebind(int slotId) {
+        synchronized (mLock) {
             SlotState s = mSlots.get(slotId);
-            if (s == null) {
-                s = new SlotState(slotId);
-                mSlots.put(slotId, s);
-            }
-            if (s.binder != null && s.binder.isBinderAlive()) return s.binder;
-
-            String name = DESCRIPTOR + "/" + (slotId == 0 ? "imsd" : "imsd2");
-            IBinder b;
-            try {
-                b = ServiceManager.checkService(name);
-            } catch (Throwable t) {
-                Log.w(TAG, "checkService threw for " + name, t);
-                return null;
-            }
-            if (b == null) {
-                Log.w(TAG, "service not yet declared: " + name);
-                return null;
-            }
-            s.binder = b;
-            Log.i(TAG, "slot=" + slotId + " bound to " + name);
-
-            /* Install the per-slot callback so any modem-originated
-             * IIL messages on this slot's channel surface as log
-             * lines. */
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(DESCRIPTOR);
-                data.writeStrongBinder(s.callbackStub);
-                boolean ok = s.binder.transact(TXN_SET_CALLBACK, data, reply, 0);
-                if (ok) {
-                    reply.readException();
-                    Log.i(TAG, "slot=" + slotId + " setCallback OK");
-                } else {
-                    Log.w(TAG, "slot=" + slotId + " setCallback transact false");
-                }
-            } catch (RemoteException | RuntimeException e) {
-                Log.w(TAG, "slot=" + slotId + " setCallback failed", e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return s.binder;
+            if (s == null || s.stopped || s.rebindAttempt == 0) return;
+            if (connectLocked(s, false) == null) scheduleRebindLocked(s);
         }
     }
 
@@ -281,7 +437,7 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
             }
         } catch (RemoteException | RuntimeException e) {
             Log.w(TAG, "sendRegistration slot=" + slotId + " failed", e);
-            invalidate(slotId);
+            invalidate(slotId, binder);
         }
     }
 
@@ -357,16 +513,17 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
             }
         } catch (RemoteException | RuntimeException e) {
             Log.w(TAG, "sendPreference slot=" + slotId + " failed", e);
-            invalidate(slotId);
+            invalidate(slotId, binder);
         }
     }
 
-    /** Drop the cached binder on remote death; next call will
-     *  re-bind via ServiceManager.checkService. */
-    private void invalidate(int slotId) {
+    /** Drop a binder whose send failed and re-bind the slot. A newer
+     *  binder bound meanwhile is kept. */
+    private void invalidate(int slotId, IBinder failed) {
         synchronized (mLock) {
             SlotState s = mSlots.get(slotId);
-            if (s != null) s.binder = null;
+            if (s == null || s.binder != failed) return;
+            loseChannelLocked(s, "send failed");
         }
     }
 

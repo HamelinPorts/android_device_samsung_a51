@@ -35,6 +35,7 @@ public final class SamsungImsModemBridgeService extends Service {
     @Override
     public void onDestroy() {
         Log.i(TAG, "service onDestroy");
+        mImpl.shutdown();
         super.onDestroy();
     }
 }
