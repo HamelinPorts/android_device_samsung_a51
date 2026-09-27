@@ -82,9 +82,9 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
     private static final int TOTAL_LEN = HEADER_LEN + BODY_LEN; // 273
     private static final int MAX_URI_UTF8 = 256;
 
-    /** Re-bind backoff after losing a channel: 0.5 s doubling to 8 s,
-     *  ~2 min in total, which covers a rild + modem restart. Past that
-     *  the next send re-binds lazily. */
+    /** Re-bind backoff after losing a channel or a refused setCallback:
+     *  0.5 s doubling to 8 s, ~2 min in total, which covers a rild +
+     *  modem restart. Past that the next send re-binds lazily. */
     private static final long REBIND_INITIAL_DELAY_MS = 500;
     private static final long REBIND_MAX_DELAY_MS = 8_000;
     private static final int REBIND_MAX_ATTEMPTS = 20;
@@ -95,6 +95,8 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
         final int slotId;
         IBinder binder;
         IBinder.DeathRecipient deathRecipient;
+        /** rild holds our callback on {@link #binder}. */
+        boolean callbackInstalled;
         /** Set by {@code stop()}: a lost channel is not re-bound. */
         boolean stopped;
         /** Current re-bind attempt; 0 while no re-bind is pending. */
@@ -237,28 +239,50 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
         return DESCRIPTOR + "/" + (slotId == 0 ? "imsd" : "imsd2");
     }
 
-    /** Look up the rild-hosted binder for the slot, watch it for death
-     *  and install the callback. Uses {@code checkService}
-     *  (non-blocking) so a missing service on a slot with no SIM
-     *  doesn't wedge us forever. Returns the live binder or null. */
+    /** Bind the slot's channel and install the callback. Returns the
+     *  live binder, or null if rild does not serve the slot right now.
+     *
+     *  <p>A binder that refused setCallback is still returned, so sends
+     *  go out, but the slot counts as re-bound only once rild holds the
+     *  callback; until then the bounded re-bind retries it. */
     private IBinder connectLocked(SlotState s, boolean logMissing) {
-        if (s.binder != null) {
-            if (s.binder.isBinderAlive()) return s.binder;
+        if (s.binder != null && !s.binder.isBinderAlive()) {
             /* Dead, but the death notice has not been delivered yet. */
             loseChannelLocked(s, "rild died");
         }
+        if (s.binder == null && !acquireLocked(s, logMissing)) return null;
+        if (s.callbackInstalled) return s.binder;
 
+        s.callbackInstalled = installCallbackLocked(s);
+        if (!s.callbackInstalled) {
+            /* A pending re-bind reschedules itself in rebind(). */
+            if (!s.stopped && s.rebindAttempt == 0) scheduleRebindLocked(s);
+            return s.binder;
+        }
+        if (s.rebindAttempt != 0) {
+            Log.i(TAG, "slot=" + s.slotId + " re-bound " + serviceName(s.slotId)
+                    + " (attempt " + s.rebindAttempt + ")");
+            s.rebindAttempt = 0;
+            mRebindHandler.removeCallbacksAndMessages(s);
+        }
+        return s.binder;
+    }
+
+    /** Look up the rild-hosted binder for the slot and watch it for
+     *  death. Uses {@code checkService} (non-blocking) so a missing
+     *  service on a slot with no SIM doesn't wedge us forever. */
+    private boolean acquireLocked(SlotState s, boolean logMissing) {
         String name = serviceName(s.slotId);
         IBinder b;
         try {
             b = ServiceManager.checkService(name);
         } catch (Throwable t) {
             Log.w(TAG, "checkService threw for " + name, t);
-            return null;
+            return false;
         }
         if (b == null) {
             if (logMissing) Log.w(TAG, "service not yet declared: " + name);
-            return null;
+            return false;
         }
 
         IBinder.DeathRecipient recipient = new ChannelDeathRecipient(s.slotId, b);
@@ -266,44 +290,36 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
             b.linkToDeath(recipient, 0);
         } catch (RemoteException e) {
             loseChannelLocked(s, name + " died while binding");
-            return null;
+            return false;
         }
         s.binder = b;
         s.deathRecipient = recipient;
         Log.i(TAG, "slot=" + s.slotId + " bound to " + name);
-
-        installCallbackLocked(s);
-
-        if (s.rebindAttempt != 0) {
-            Log.i(TAG, "slot=" + s.slotId + " re-bound " + name
-                    + " after channel loss (attempt " + s.rebindAttempt + ")");
-            s.rebindAttempt = 0;
-            mRebindHandler.removeCallbacksAndMessages(s);
-        }
-        return s.binder;
+        return true;
     }
 
     /** Install the per-slot callback so any modem-originated IIL
-     *  messages on this slot's channel surface as log lines. */
-    private static void installCallbackLocked(SlotState s) {
+     *  messages on this slot's channel surface as log lines. Returns
+     *  whether rild accepted it. */
+    private static boolean installCallbackLocked(SlotState s) {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(DESCRIPTOR);
             data.writeStrongBinder(s.callbackStub);
-            boolean ok = s.binder.transact(TXN_SET_CALLBACK, data, reply, 0);
-            if (ok) {
+            if (s.binder.transact(TXN_SET_CALLBACK, data, reply, 0)) {
                 reply.readException();
                 Log.i(TAG, "slot=" + s.slotId + " setCallback OK");
-            } else {
-                Log.w(TAG, "slot=" + s.slotId + " setCallback transact false");
+                return true;
             }
+            Log.w(TAG, "slot=" + s.slotId + " setCallback transact false");
         } catch (RemoteException | RuntimeException e) {
             Log.w(TAG, "slot=" + s.slotId + " setCallback failed", e);
         } finally {
             reply.recycle();
             data.recycle();
         }
+        return false;
     }
 
     /** Forget the slot's binder without scheduling anything. */
@@ -317,6 +333,7 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
         }
         s.binder = null;
         s.deathRecipient = null;
+        s.callbackInstalled = false;
     }
 
     /** Forget the slot's binder and, unless the slot is stopped or a
@@ -347,7 +364,8 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
         synchronized (mLock) {
             SlotState s = mSlots.get(slotId);
             if (s == null || s.stopped || s.rebindAttempt == 0) return;
-            if (connectLocked(s, false) == null) scheduleRebindLocked(s);
+            connectLocked(s, false);
+            if (!s.callbackInstalled) scheduleRebindLocked(s);
         }
     }
 
