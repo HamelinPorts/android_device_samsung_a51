@@ -175,6 +175,10 @@ BOARD_INCLUDE_RECOVERY_DTBO :=
 TARGET_LINUX_KERNEL_VERSION := 6.1
 TARGET_BOARD_KERNEL_HEADERS := hardware/samsung_slsi-linaro/exynos/kernel-$(TARGET_LINUX_KERNEL_VERSION)-headers/kernel-headers
 $(call soong_config_set_bool,openmax,MAINLINE_FEATURE_IN_SINCE_4_19,true)
+
+# The 6.12 SCSC driver numbers its vendor attributes from 1 under a strict
+# nla policy; the Wi-Fi HAL has to number them the same way.
+$(call soong_config_set_bool,scsc_wifi_hal,nl_attr_config,true)
 endif
 
 # ART: preopt SystemUI only (lineage_a51.mk).  There is no preopt allowlist, so every
