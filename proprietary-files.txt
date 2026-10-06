@@ -86,6 +86,13 @@ vendor/firmware/calliope_sram.bin
 vendor/firmware/param_ti.bin
 vendor/firmware/rtdsp_param.bin
 
+## Wi-Fi Firmware Log Strings
+# Pinned to A515FXXU8HWI1, the only A515F dump we hold. The driver decodes the
+# Wi-Fi firmware's log messages with this table, so it must come from the same
+# firmware build: its header names S620_E9610_R3-1_Y23W37A, the build of the
+# shipped mx140.bin.
+vendor/etc/wifi/mx140/debug/common/log-strings.bin|af85efb03d03f68ec325ec4f5ff9a778539d9a73
+
 ## DAP
 vendor/lib/soundfx/libswdap.so
 
