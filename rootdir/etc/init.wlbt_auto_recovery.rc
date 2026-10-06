@@ -1,0 +1,8 @@
+# Let the WLBT driver recover a failed Wi-Fi/BT firmware by itself: it
+# powers the chip down and restarts both services without a reboot.
+# 0, not 2: mode 2 follows /sys/wifi/memdump, which this kernel never
+# creates, so it would keep recovery off.
+# Same trigger as init.wlbt_modules.rc; init runs it first (file name
+# order), so every service open already sees recovery on.
+on post-fs
+    write /sys/module/scsc_mx/parameters/disable_recovery_handling 0

@@ -12,3 +12,10 @@ prebuilt_etc {
    sub_dir: "init",
    vendor: true,
 }
+
+prebuilt_etc {
+   name: "init.wlbt_auto_recovery.rc",
+   src: "etc/init.wlbt_auto_recovery.rc",
+   sub_dir: "init",
+   vendor: true,
+}

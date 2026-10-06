@@ -32,7 +32,8 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # Init.rc
 PRODUCT_PACKAGES += \
-    fingerprint_common.rc
+    fingerprint_common.rc \
+    init.wlbt_auto_recovery.rc
 
 # Device-node permissions that must not leak to the other universal9611
 # devices. /system/etc/ueventd.rc imports this after /vendor/etc/ueventd.rc.
