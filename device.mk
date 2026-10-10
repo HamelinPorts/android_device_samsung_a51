@@ -23,6 +23,10 @@ $(call inherit-product, vendor/samsung/a51/a51-vendor.mk)
 
 DEVICE_PACKAGE_OVERLAYS += $(DEVICE_PATH)/overlay
 
+# Wi-Fi resources for the A51 only, on top of the common WifiOverlay
+PRODUCT_PACKAGES += \
+    WifiOverlayA51
+
 # Screen H/W
 TARGET_SCREEN_HEIGHT := 2400
 TARGET_SCREEN_WIDTH := 1080

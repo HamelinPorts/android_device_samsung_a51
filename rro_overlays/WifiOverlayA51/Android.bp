@@ -1,0 +1,5 @@
+runtime_resource_overlay {
+    name: "WifiOverlayA51",
+    theme: "WifiOverlayA51",
+    vendor: true,
+}

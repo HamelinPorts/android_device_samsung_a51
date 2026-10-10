@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-FileCopyrightText: The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Block a network after a wrong-password failure for 10 minutes instead of until the user
+         re-enters it: a handshake that loses an EAPOL frame is reported as a wrong password,
+         and the permanent block then keeps a correct saved network off for the whole boot. -->
+    <integer translatable="false" name="config_wifiDisableReasonByWrongPasswordDurationMs">600000</integer>
+</resources>
