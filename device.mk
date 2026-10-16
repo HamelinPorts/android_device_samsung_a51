@@ -141,6 +141,14 @@ PRODUCT_SYSTEM_PROPERTIES += persist.dbg.volte_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.vt_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.wfc_avail_ovr=1
 
+# Wi-Fi calling: IKE dead peer detection every 1800 s, the IWLAN maximum,
+# instead of the IMS app's 300 s. The WLBT firmware sends the NAT-T
+# keepalives, so DPD only checks that the ePDG is alive; a silently lost
+# ePDG is noticed after up to 30 min. Read by HamelinPortsImsService; takes
+# effect at the next tunnel bring-up. System build.prop: the property has a
+# platform label, which vendor_init may not set from vendor.prop.
+PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.dpd.sec=1800
+
 # GWP-ASan heap-corruptor hunt on system_server (task #41, transient diagnostic).
 # A DebugStore abort in free() is a canary for an external heap overflow in
 # system_server's address space; arming GWP-ASan traps the overflow at write
