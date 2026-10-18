@@ -141,13 +141,22 @@ PRODUCT_SYSTEM_PROPERTIES += persist.dbg.volte_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.vt_avail_ovr=1
 PRODUCT_SYSTEM_PROPERTIES += persist.dbg.wfc_avail_ovr=1
 
-# Wi-Fi calling: IKE dead peer detection every 1800 s, the IWLAN maximum,
-# instead of the IMS app's 300 s. The WLBT firmware sends the NAT-T
-# keepalives, so DPD only checks that the ePDG is alive; a silently lost
-# ePDG is noticed after up to 30 min. Read by HamelinPortsImsService; takes
-# effect at the next tunnel bring-up. System build.prop: the property has a
-# platform label, which vendor_init may not set from vendor.prop.
-PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.dpd.sec=1800
+# Wi-Fi calling: IKE dead peer detection every 600 s instead of the IMS app's
+# 300 s. The WLBT firmware sends the NAT-T keepalives, so DPD only checks
+# that the ePDG is alive; a silently lost ePDG is noticed after up to 10 min.
+# Read by HamelinPortsImsService; takes effect at the next tunnel bring-up.
+# System build.prop: the properties below have a platform label, which
+# vendor_init may not set from vendor.prop.
+PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.dpd.sec=600
+
+# Wi-Fi calling: when the IWLAN data path fails while the tunnel looks up
+# (e.g. the home router reconnecting its WAN), report it so QNS moves IMS
+# to LTE for 30 min, longer than such an outage. Read once per boot.
+PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.iwlan_fallback.sec=1800
+
+# Push the IMS carrier-config override again once the SIM is loaded, so
+# Telephony saves it and QNS finds the fallback rules at its first load.
+PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.cc_repush=1
 
 # GWP-ASan heap-corruptor hunt on system_server (task #41, transient diagnostic).
 # A DebugStore abort in free() is a canary for an external heap overflow in
