@@ -158,6 +158,10 @@ PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.iwlan_fallback.sec=1800
 # Telephony saves it and QNS finds the fallback rules at its first load.
 PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.cc_repush=1
 
+# MO SMS over IMS: an RP-ERROR whose cause the carrier lists for fallback
+# (e.g. 10 "call barred", seen on LTE) makes the framework resend over CS.
+PRODUCT_SYSTEM_PROPERTIES += persist.lineage.ims.sms_rp_fallback=1
+
 # GWP-ASan heap-corruptor hunt on system_server (task #41, transient diagnostic).
 # A DebugStore abort in free() is a canary for an external heap overflow in
 # system_server's address space; arming GWP-ASan traps the overflow at write
