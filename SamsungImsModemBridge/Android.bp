@@ -28,6 +28,20 @@ android_app {
     },
 }
 
+// Host test of the IIL frame encoder against the stock frames:
+//   atest --host SamsungImsModemBridgeTests
+java_test_host {
+    name: "SamsungImsModemBridgeTests",
+    srcs: [
+        "src/org/hamelinports/samsung/ims/IilFrame.java",
+        "tests/host/src/**/*.java",
+    ],
+    static_libs: ["junit"],
+    test_options: {
+        unit_test: true,
+    },
+}
+
 prebuilt_etc {
     name: "privapp-permissions-org.hamelinports.samsung.ims",
     filename: "privapp-permissions-org.hamelinports.samsung.ims.xml",

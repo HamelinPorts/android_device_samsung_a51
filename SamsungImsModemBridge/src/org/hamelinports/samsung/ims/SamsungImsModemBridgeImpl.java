@@ -14,7 +14,6 @@ import android.util.SparseArray;
 import org.hamelinports.ims.modem.IImsModemBridge;
 import org.hamelinports.ims.modem.IImsModemBridgeCallback;
 
-import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 
 /**
@@ -25,13 +24,11 @@ import java.util.NoSuchElementException;
  * proprietary 2-method binder AIDL
  * {@code vendor.samsung.hardware.radio.channel.ISehRadioChannel}
  * hosted by rild, with service name {@code imsd} (slot 0) /
- * {@code imsd2} (slot 1). The on-wire format is the IIL protocol:
- * 5-byte header {@code [len_lo, len_hi, 0x70 main, sub, 0x03 type=EXEC]}
- * followed by the subcommand body.
+ * {@code imsd2} (slot 1). The on-wire format is the IIL protocol;
+ * {@link IilFrame} encodes the frames.
  *
  * <p>Implements {@code IPC_IIL_REGISTRATION (0x01)} +
- * {@code IPC_IIL_PREFERENCE (0x06)} — the two load-bearing messages
- * for MT routing on Samsung's stack.
+ * {@code IPC_IIL_PREFERENCE (0x06)}.
  *
  * <p>Slot demux: this Stub serves both slot 0 and slot 1 from a
  * single Service instance. Per-slot binder bindings (to imsd vs
@@ -55,32 +52,6 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
     private static final int TXN_SET_CALLBACK = IBinder.FIRST_CALL_TRANSACTION;     // 0x01
     private static final int TXN_SEND         = IBinder.FIRST_CALL_TRANSACTION + 1; // 0x02
     private static final int CB_TXN_RECEIVE   = IBinder.FIRST_CALL_TRANSACTION;     // 0x01
-
-    /** IIL protocol constants. */
-    private static final byte MAIN_IIL          = (byte) 0x70;
-    private static final byte TYPE_EXEC         = (byte) 0x03;
-    private static final byte SUB_REGISTRATION  = (byte) 0x01;
-    private static final byte SUB_PREFERENCE    = (byte) 0x06;
-
-    /** Feature-flags bit positions at body[1] of REGISTRATION. */
-    private static final int FLAG_VOLTE  = 0x01;
-    private static final int FLAG_SMSIP  = 0x02;
-    private static final int FLAG_RCS    = 0x04;
-    private static final int FLAG_PSVT   = 0x08;
-    private static final int FLAG_CDPN   = 0x20;
-
-    /** FeatureTag bitmap values at body[3] of REGISTRATION. */
-    private static final int FTAG_CS     = 0x01;
-    private static final int FTAG_SMSIP  = 0x02;
-    private static final int FTAG_VOLTE  = 0x04;
-    private static final int FTAG_VIDEO  = 0x08;
-    private static final int FTAG_MMTEL  = 0x10;
-
-    /** Body is fixed-width regardless of URI length. */
-    private static final int BODY_LEN = 0x10C; // 268
-    private static final int HEADER_LEN = 5;
-    private static final int TOTAL_LEN = HEADER_LEN + BODY_LEN; // 273
-    private static final int MAX_URI_UTF8 = 256;
 
     /** Re-bind backoff after losing a channel or a refused setCallback:
      *  0.5 s doubling to 8 s, ~2 min in total, which covers a rild +
@@ -379,58 +350,7 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
             return;
         }
         try {
-            byte[] buf = new byte[TOTAL_LEN];
-
-            /* IIL 5-byte header. Total-length is little-endian u16. */
-            buf[0] = (byte) (TOTAL_LEN & 0xFF);
-            buf[1] = (byte) ((TOTAL_LEN >> 8) & 0xFF);
-            buf[2] = MAIN_IIL;
-            buf[3] = SUB_REGISTRATION;
-            buf[4] = TYPE_EXEC;
-
-            int bo = HEADER_LEN; // body origin
-
-            buf[bo + 0] = 0; // LimitedMode
-
-            int flags = 0;
-            if (registered) {
-                if (volte) flags |= FLAG_VOLTE;
-                if (smsIp) flags |= FLAG_SMSIP;
-            }
-            buf[bo + 1] = (byte) flags;
-
-            /* PdnType — 0 maps to "no specific PDN type declared".
-             * Empirically accepted on pre-IPv4v6 setups. */
-            buf[bo + 2] = 0;
-
-            /* FeatureTag bitmap — capability set for this REGISTER.
-             * Only populate when registered; dereg sends zeros. */
-            int ftag = 0;
-            if (registered) {
-                if (smsIp) ftag |= FTAG_SMSIP;
-                if (volte) ftag |= FTAG_VOLTE | FTAG_MMTEL;
-                if (video) ftag |= FTAG_VIDEO;
-            }
-            buf[bo + 3] = (byte) ftag;
-
-            buf[bo + 4] = 0; // Ecmp
-            buf[bo + 5] = 0; // EpdgMode
-            /* [6..7] ErrorCode big-endian u16; 0 = success. */
-            buf[bo + 6] = 0;
-            buf[bo + 7] = 0;
-            /* [8..9] reserved. */
-            buf[bo + 8] = 0;
-            buf[bo + 9] = 0;
-
-            /* [10] IMPU UTF-8 length + [11..] IMPU UTF-8. */
-            byte[] impu = (impuUri != null && registered)
-                    ? impuUri.getBytes(StandardCharsets.UTF_8) : new byte[0];
-            int impuLen = Math.min(impu.length, MAX_URI_UTF8);
-            buf[bo + 10] = (byte) impuLen;
-            System.arraycopy(impu, 0, buf, bo + 11, impuLen);
-
-            /* [0x10B] RegiRat. */
-            buf[bo + 0x10B] = (byte) (registered ? rat : 0);
+            byte[] buf = IilFrame.registration(registered, rat, volte, smsIp, video, impuUri);
 
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
@@ -443,9 +363,11 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
                     Log.i(TAG, "REGISTRATION sent slot=" + slotId
                             + " reg=" + registered
                             + " rat=" + rat
-                            + " flags=0x" + Integer.toHexString(flags)
-                            + " ftag=0x" + Integer.toHexString(ftag)
-                            + " impuLen=" + impuLen);
+                            + " modemRat=" + IilFrame.modemRat(rat)
+                            + " flags=0x" + Integer.toHexString(IilFrame.registrationFeatures(
+                                    registered, volte, smsIp, video))
+                            + " impuLen=" + IilFrame.impuLength(buf)
+                            + " len=" + buf.length);
                 } else {
                     Log.w(TAG, "slot=" + slotId + " transact returned false");
                 }
@@ -468,50 +390,7 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
             return;
         }
         try {
-            /* 5-byte header + 14-byte body = 19 total */
-            final int PREF_BODY_LEN = 14;
-            final int TOTAL = HEADER_LEN + PREF_BODY_LEN;
-            byte[] buf = new byte[TOTAL];
-            buf[0] = (byte) (TOTAL & 0xFF);
-            buf[1] = (byte) ((TOTAL >> 8) & 0xFF);
-            buf[2] = MAIN_IIL;
-            buf[3] = SUB_PREFERENCE;
-            buf[4] = TYPE_EXEC;
-            int bo = HEADER_LEN;
-            /* [0] SmsFormat — 3GPP TP format. */
-            buf[bo + 0] = 0;
-            /* [1] SmsOverIms — 1 enables SIP MESSAGE path. */
-            buf[bo + 1] = (byte) (smsOverIms ? 1 : 0);
-            /* [2] SmsWriteUicc — don't write incoming SMS to SIM. */
-            buf[bo + 2] = 0;
-            /* [3] SmsFallbackPreference — no CS fallback for SMS. */
-            buf[bo + 3] = 0;
-            /* [4] EutranDomain — load-bearing byte: 3 = PS-voice-
-             * preferred for LTE, drives "IMS Voice over PS Session
-             * Indicator" = 1 in the next NAS TAU
-             * (3GPP TS 24.301 §9.9.3.30). */
-            buf[bo + 4] = (byte) 3;
-            /* [5] UtranDomain — 1 = CS preferred on 3G. */
-            buf[bo + 5] = (byte) 1;
-            /* [6] SsDomain — PS = byte 0. */
-            buf[bo + 6] = 0;
-            /* [7] UssdDomain — CS = 1 (standard). */
-            buf[bo + 7] = (byte) 1;
-            /* [8] EccPreference — 0 = CS-preferred emergency. */
-            buf[bo + 8] = 0;
-            /* [9] SsCsfb — 0 = SS stays on PS if registered. */
-            buf[bo + 9] = 0;
-            /* [10] ImsSupportType bitmap: bit0=VoLTE bit1=Video. */
-            int supportType = 0;
-            if (volte) supportType |= 0x01;
-            if (video) supportType |= 0x02;
-            buf[bo + 10] = (byte) supportType;
-            /* [11] SrvccVersion — 0 until negotiated. */
-            buf[bo + 11] = 0;
-            /* [12] SupportVolteRoaming — 0 = home-only. */
-            buf[bo + 12] = 0;
-            /* [13] notification type = 3 (post-register notify). */
-            buf[bo + 13] = (byte) 3;
+            byte[] buf = IilFrame.preference(volte, video, smsOverIms);
 
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
@@ -523,7 +402,8 @@ final class SamsungImsModemBridgeImpl extends IImsModemBridge.Stub {
                 Log.i(TAG, "PREFERENCE sent slot=" + slotId
                         + " volte=" + volte + " video=" + video
                         + " smsIp=" + smsOverIms
-                        + " supportType=0x" + Integer.toHexString(supportType)
+                        + " supportType=0x" + Integer.toHexString(
+                                IilFrame.imsSupportType(volte, video))
                         + " ok=" + ok);
             } finally {
                 reply.recycle();
